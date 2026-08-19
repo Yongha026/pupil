@@ -37,6 +37,7 @@ from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_pupil_outline
 from pupil_detector_plugins import deepvog
 from pupil_detector_plugins import edgaze
+from pupil_detector_plugins import adgbc
 from draw_ellipse import fit_ellipse
 from CheckEllipse import computeEllipseConfidence
 import cv2
@@ -85,31 +86,51 @@ class Detector2DPlugin(PupilDetectorPlugin):
         super().__init__(g_pool=g_pool)
         self.detector_2d = detector_2d or Detector2D(properties or {})
         """
-                기존 __init__에 model_path, device, preview 등을 인자로 추가.
-                """
-        super().__init__(g_pool=g_pool)
-        self.detector_2d = detector_2d or Detector2D(properties or {})
+        기존 __init__에 model_path, device, preview 등을 인자로 추가.
+        """
 
 
         model_name = "densenet"
         model_path = "./best_model.pkl"
+        plugin_dir = os.path.dirname(__file__)
+        model_path_adgbc = os.path.join(plugin_dir,"ckpt_adgbc.pth") # 따로 ckpt넣어야함(깃허브 용량이슈, .pth about 300mb)
+        # ADGBC gdown
+        # https://drive.google.com/file/d/1JyhUCi0R4uFlNtVVRNIM6a71gObdDrYi/view?usp=sharing
         device_str = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.device = torch.device(device_str)
 
-        # 3) 모델 로드
-        #    (model_dict, get_predictions 등은 RITnet 예제에서 import 했다고 가정)
-        if model_name not in model_dict:
-            logger.error(f"Model {model_name} not found. Valid: {list(model_dict.keys())}")
-            raise ValueError("Invalid model name.")
+        # # 3) RITnet모델 로드
+        # #    (model_dict, get_predictions 등은 RITnet 예제에서 import 했다고 가정)
+        # if model_name not in model_dict:
+        #     logger.error(f"Model {model_name} not found. Valid: {list(model_dict.keys())}")
+        #     raise ValueError("Invalid model name.")
+        #
+        # if not os.path.exists(model_path):
+        #     logger.error(f"Model path {model_path} not found!")
+        #     raise FileNotFoundError(model_path)
+        #
+        # self.model = model_dict[model_name]().to(self.device)
+        # self.model.load_state_dict(torch.load(model_path))
+        # self.model.eval()
 
-        if not os.path.exists(model_path):
-            logger.error(f"Model path {model_path} not found!")
-            raise FileNotFoundError(model_path)
+        # 3) AD-GBC 모델 load from .pth
+        # model = archs_GBC.__dict__[config['arch']](num_classes=config['num_classes'],
+        #                                            input_channels=config['input_channels'],
+        #                                            deep_supervision=config['deep_supervision'])
+        self.model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False)
+        self.model = self.model.to(self.device)
 
-        self.model = model_dict[model_name]().to(self.device)
-        self.model.load_state_dict(torch.load(model_path))
-        self.model.eval()
+        if os.path.exists(model_path_adgbc):
+            try:
+                self.model.load_state_dict(torch.load(model_path_adgbc, map_location=self.device),
+                                           weights_only= True)
+                self.model.eval()
+                logger.info("Loaded AD-GBC weights")
+            except Exception as e:
+                logger.error(f"Failed to load AD-GBC: {e}")
+        else:
+            logger.warning(f"AD-GBC ckpt file not found at {model_path_adgbc}")
 
         self.transform = torchvision.transforms.Compose(
             [
@@ -444,6 +465,108 @@ class Detector2DPlugin(PupilDetectorPlugin):
         datum["ellipse"]["angle"] = result["ellipse"]["angle"]
         datum["ellipse"]["center"] = result["ellipse"]["center"]
 
+        return datum
+
+    def detect_ADGBC(self, frame, **kwargs):
+        """
+        AD-GBC로 동공을 검출하고, Pupil Labs datum 형태로 반환.
+        1) BGR → GRAY
+        2) get_img() → Tensor
+        3) 모델 추론
+        4) get_predictions → (1, H, W) 라벨 맵
+        5) 동공 라벨(3) 이진 마스크 → 컨투어+fitEllipse
+        6) Pupil Labs datum 생성
+        """
+        ### Gemini fix####
+        # if not isinstance(frame, np.ndarray):
+        #     try:
+        #         img = self.convert_mjpeg_to_numpy(frame)
+        #     except ValueError as e:
+        #         print(f"Error converting MJPEGFrame: {e}")
+        #         return None
+        # else:
+        #     img = frame
+        if hasattr(frame, "gray"):
+            gray = frame.gray
+        elif isinstance(frame, np.ndarray):
+            if len(frame.shape) == 3:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = frame
+        else:
+            try:
+                img = self.convert_mjpeg_to_numpy(frame)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            except Exception as e:
+                logger.error(f"Error converting MJPEGFrame: {e}")
+                return None
+        #### End Gemini Fix########
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.uint8)
+
+        # 1) 전처리 → Tensor (GPU)
+        tensor = self.get_img(gray).unsqueeze(0).to(self.device)  # (1, 1, H, W)
+
+        # 2) 추론 (GPU)
+        with torch.no_grad():
+            output = self.model(tensor)
+
+        # 3) 라벨 맵 추출
+        predict = get_predictions(output)  # (1, H, W)
+        predict_2d = predict[0].cpu().numpy()  # (H, W)
+
+        # 4) 동공 라벨(3)만 이진 마스크로
+        pupil_mask = np.zeros_like(predict_2d, dtype=np.uint8)
+        pupil_mask[predict_2d == 3] = 255
+
+        # 5) 컨투어에서 타원 피팅
+        contours, _ = cv2.findContours(
+            pupil_mask,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+
+        if not contours:
+            result = {
+                "location": (0.0, 0.0),
+                "diameter": 0.0,
+                "confidence": 0.0,
+                "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
+            }
+        else:
+            best_contour = max(contours, key=cv2.contourArea)
+            if len(best_contour) < 5:
+                result = {
+                    "location": (0.0, 0.0),
+                    "diameter": 0.0,
+                    "confidence": 0.0,
+                    "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
+                }
+            else:
+                (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
+                result = {
+                    "location": (float(cx), float(cy)),
+                    "diameter": float(MA),
+                    "confidence": 1.0,
+                    "ellipse": {
+                        "axes": (float(MA), float(ma)),
+                        "angle": float(angle_deg),
+                        "center": (float(cx), float(cy)),
+                    },
+                }
+
+        norm_pos = normalize(result["location"], (frame.width, frame.height), flip_y=True)
+        datum = self.create_pupil_datum(
+            norm_pos=norm_pos,
+            diameter=result["diameter"],
+            confidence=result["confidence"],
+            timestamp=frame.timestamp,
+        )
+        datum["ellipse"] = {
+            "axes": result["ellipse"]["axes"],
+            "angle": result["ellipse"]["angle"],
+            "center": result["ellipse"]["center"],
+        }
         return datum
     #################################################################
 

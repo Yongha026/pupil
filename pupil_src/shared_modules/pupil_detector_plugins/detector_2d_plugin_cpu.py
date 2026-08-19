@@ -285,6 +285,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         }
         return datum
 
+
     def convert_to_builtin(self, obj):
         """
         NumPy → Python built‐in (dict/list/tuple) 변환
