@@ -1,4 +1,4 @@
-# Pupil + RITnet(detect)
+# Pupil + AD-GBC(detect)
 <a
 href="https://pupil-labs.com"
 rel="noopener"
