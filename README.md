@@ -10,6 +10,10 @@ target="_blank">
 	</p>
 </a>
 
+AD-GBC [repo](https://github.com/SiaShen-dot/AD-GBC)
+
+AD-GBC [paper](https://openaccess.thecvf.com/content/CVPR2026/html/Shen_AD-GBC_Anisotropic_Granular-Ball_Skip-Connection_Refiner_for_UNet-Based_Medical_Image_Segmentation_CVPR_2026_paper.html) 
+
 **Open source eye tracking platform.**
 
 Pupil is a project in active, community driven development. Pupil Core mobile eye tracking hardware is accessible, hackable, and affordable. The software is open source and written in `Python` and `C++` when speed is an issue.
