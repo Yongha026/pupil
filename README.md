@@ -10,9 +10,7 @@ target="_blank">
 	</p>
 </a>
 
-AD-GBC [repo](https://github.com/SiaShen-dot/AD-GBC)
-
-AD-GBC [paper](https://openaccess.thecvf.com/content/CVPR2026/html/Shen_AD-GBC_Anisotropic_Granular-Ball_Skip-Connection_Refiner_for_UNet-Based_Medical_Image_Segmentation_CVPR_2026_paper.html) 
+AD-GBC [repo](https://github.com/SiaShen-dot/AD-GBC), [paper](https://openaccess.thecvf.com/content/CVPR2026/html/Shen_AD-GBC_Anisotropic_Granular-Ball_Skip-Connection_Refiner_for_UNet-Based_Medical_Image_Segmentation_CVPR_2026_paper.html)
 
 **Open source eye tracking platform.**
 

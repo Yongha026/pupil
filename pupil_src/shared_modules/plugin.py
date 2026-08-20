@@ -554,3 +554,7 @@ def import_runtime_plugins(plugin_dir):
 
 class System_Plugin_Base(Plugin):
     pass
+
+######### Testing ########
+if __name__=="__main__":
+    pass
