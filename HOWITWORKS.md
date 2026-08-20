@@ -1,4 +1,4 @@
-from plugin import System_Plugin_Basefrom plugin import Pluginfrom glfw import window_should_closefrom pupil_detector_plugins import available_detector_plugins> **⚠️ Personal study by Yongha Chun⚠️**  
+> **⚠️ Personal study by Yongha Chun⚠️**  
 Might be bullshit
 
 
