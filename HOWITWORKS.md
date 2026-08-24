@@ -234,6 +234,15 @@ def world():
     출력: 
         gaze: Gaze mapping으로 얻은 gaze data
     """
+def world(...):
+    events = {}
+    events["dt"] = get_dt() # loop중 timestep 가져오기
+    
+    for p in g_pool.plugins:
+        p.recent_events(events) # 각 플러그인들에게 데이터 주고 해야할 일 시키기 = detect pupil, predict gaze...
+    
+    del events["pupil"]
+    del events["gaze"] # 처리 및 전송 완료한 데이터 삭제 
 ```
 ---
 # 99. Gemini 정리

@@ -31,3 +31,9 @@ pupil-detectors>=2.0.2rc2
 pupil-labs-uvc
 pye3d>=0.3.2
 pyglui>=1.31.1b1
+
+# AD-GBC
+torch==2.5.1
+torchvision==0.20.1
+timm==1.0.22
+matplotlib==3.10.7

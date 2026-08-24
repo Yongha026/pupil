@@ -27,6 +27,7 @@ settings/
 *.db
 *.npy
 *.png
+!test_pupil_result.png
 *.log
 
 
@@ -61,5 +62,5 @@ win_drv
 A
 *.exe
 
-# adgbc ckpts
-pupil_src/shared_modules/pupil_detector_plugins/adgbc.pth 
+# AD-GBC ckpts
+pupil_src/shared_modules/pupil_detector_plugins/adgbc_nn_best.pth

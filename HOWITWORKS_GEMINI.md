@@ -15,7 +15,10 @@
    * 수신한 동공 데이터를 실시간으로 활성화된 `Gazer` 플러그인(예: `Gazer2D`)으로 보내고, Gazer는 사전에 매핑 및 보정된 보정 모델(Calibration Model)을 사용하여 2D 화면 좌표나 3D 시선(gaze) 데이터로 변환/추론합니다.
 
 5. **시선 시각화 및 월드 프레임 매칭 (`world.py`):**
-   * [world.py](file:///D:/School/4-3/pupil/pupil_src/launchables/world.py) 프로세스는 외부/장면을 촬영하는 월드 카메라 영상 프레임과 매핑 완료된 gaze 데이터를 수신하여 결합합니다. 월드 프레임 화면 상의 좌표에 사용자가 쳐다보고 있는 주시점(Gaze Point) 원을 렌더링하고 기록합니다.
+   * [world.py](file:///D:/School/4-3/pupil/pupil_src/launchables/world.py) 프로세스는 주 월드 카메라(장면 카메라) 영상을 획득하고 관리하는 프로세스입니다. 
+   * **영상 프레임 획득:** `UVC_Source`나 `File_Source` 같은 비디오 소스 플러그인이 실행되어 월드 카메라 영상 프레임을 가져와 `events["frame"]`에 담아둡니다.
+   * **플러그인 실행 루프:** 매 프레임마다 활성화된 플러그인 리스트(`g_pool.plugins`)를 루프 돌며 `recent_events(events)` 메소드를 실행합니다. 이때 순서에 따라 `Pupil_Data_Relay`가 Gazer 모델로 추론한 시선 좌표를 `events["gaze"]`에 추가하고, `Display_Recent_Gaze`가 이를 가져와 월드 프레임 위에 원형(circle)으로 시각화 오버레이 렌더링을 처리합니다.
+   * **최종 데이터 배포:** 매칭 완료된 gaze 데이터와 분석 결과는 ZeroMQ IPC를 통해 실시간 방송(Publish)되어 다른 프로세스로 배포되거나 `Recorder` 플러그인을 통해 디스크에 최종 기록됩니다.
 
 6. **보정 마커 생성 및 관리 (`calibration_choreography`):**
    * `calibration_choreography` 폴더 내의 플러그인들은 보정(Calibration)을 위한 화면 좌표계 상의 마커를 띄우고, 마커가 떠 있는 타겟 좌표(`ref_list`)와 사용자의 눈동자 위치 데이터(`pupil_list`)를 동시에 수집하는 주체입니다.

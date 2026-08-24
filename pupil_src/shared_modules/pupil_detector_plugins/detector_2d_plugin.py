@@ -93,9 +93,9 @@ class Detector2DPlugin(PupilDetectorPlugin):
         model_name = "densenet"
         model_path = "./best_model.pkl"
         plugin_dir = os.path.dirname(__file__)
-        model_path_adgbc = os.path.join(plugin_dir,"ckpt_adgbc.pth") # 따로 ckpt넣어야함(깃허브 용량이슈, .pth about 300mb)
+        model_path_adgbc = os.path.join(plugin_dir,"adgbc_nn_best.pth") # 따로 ckpt넣어야함(깃허브 용량이슈, .pth about 300mb)
         # ADGBC gdown
-        # https://drive.google.com/file/d/1JyhUCi0R4uFlNtVVRNIM6a71gObdDrYi/view?usp=sharing
+        # https://drive.google.com/file/d/1By1SsLnPVxvQ6CiJ5sBThfqcW-0o5OpN/view?usp=drive_link
         device_str = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.device = torch.device(device_str)
@@ -118,15 +118,18 @@ class Detector2DPlugin(PupilDetectorPlugin):
         # model = archs_GBC.__dict__[config['arch']](num_classes=config['num_classes'],
         #                                            input_channels=config['input_channels'],
         #                                            deep_supervision=config['deep_supervision'])
-        self.model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False)
-        self.model = self.model.to(self.device)
+        self.model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
 
         if os.path.exists(model_path_adgbc):
             try:
-                self.model.load_state_dict(torch.load(model_path_adgbc, map_location=self.device),
-                                           weights_only= True)
+                checkpoint = torch.load(model_path_adgbc, map_location=self.device, weights_only=False)
+                if isinstance(checkpoint, dict) and "network_weights" in checkpoint:
+                    state_dict = checkpoint["network_weights"]
+                else:
+                    state_dict = checkpoint
+                self.model.load_state_dict(state_dict)
                 self.model.eval()
-                logger.info("Loaded AD-GBC weights")
+                logger.info("Loaded AD-GBC weights successfully")
             except Exception as e:
                 logger.error(f"Failed to load AD-GBC: {e}")
         else:
@@ -502,7 +505,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 return None
         #### End Gemini Fix########
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.uint8)
+        gray = gray.astype(np.uint8)
 
         # 1) 전처리 → Tensor (GPU)
         tensor = self.get_img(gray).unsqueeze(0).to(self.device)  # (1, 1, H, W)
