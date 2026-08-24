@@ -1,6 +1,13 @@
-> **⚠️ Personal study by Yongha Chun⚠️**  
+from calibration_choreography.controller import MarkerWindowControllerfrom calibration_choreography import ChoreographyMode> **⚠️ Personal study by Yongha Chun⚠️**  
 Might be bullshit
-
+# 0. Overall workflow
+    1. ./pupil_src/main.py 에서 pupil 관리, eye detection 등 plugin들 인스턴스화 후 IPC(Inter-Process Comm.)로 플러그인들 리스트 줄세워놓고 관리
+    2. plugin.py에서 플러드인들 줄 관리, 실행
+    3. eye.py에서 pupil detector 활용, eye video에서 동공 검출 (+ellpse fit)
+    4. gazer에서 pupil data로 gaze data 추론
+    5. world.py에서 gaze data와 world camera 맞춰서 화면에 어디인지(??)
+    6. calibration_choreography 폴더에서 칼리 위한 마커 생성, gaze 데이터와 맞는지는 gazer.py에서 
+    ???. Gazer는 pupil에서 gaze도 추론하고 해당 데이터와 marker의 GT가 맞는지도 검증하는건가???
 
 # 1. Pupil detection - RITnet 버전(develop branch)
 **[detector_2d_plugin.py](./pupil_src/shared_modules/pupil_detector_plugins/detector_2d_plugin.py)**
@@ -43,6 +50,13 @@ def available_detector_plugins() -> T.List[T.Type[PupilDetectorPlugin]]:
 ***이걸 실제로 불러오는 애는 [eye.py](./pupil_src/launchables/eye.py).***
 ```python
 def eye(*args, **kwargs):
+    
+    """
+    Eye video 읽고 pupil 검출 : 눈 보는 카메라
+    출력:
+        pupil.<eye_id>      : Pupil data
+        frame.eye.<eye_id>  : Eye frames
+    """
     with Is_Alive_Manager(*args, **kwargs):
         def load_runtime_pupil_detection_plugins():
             for plugin in import_runtime_plugins(plugins_path):
@@ -103,8 +117,7 @@ class GazerBase(abd.ABC, Plugin):
     def __init__(
             self, g_pool, *, calib_data, params, raise_calibration_error
     ):
-        # calib_data 받아서 fit하는 부분. 초반 몇 프레임 받아서 calibration 하는 부분 맞는지?
-        # TODO: 칼리브레이션 어떻게 하는건지 보기.
+        # calib_data 받아서 fit하는 부분. Target 5개 / 9개 이용해서 calib_data 생성.
 
     def map_pupil_to_gaze(self, pupil_data, sort_by_creation_time):
         pupil_data = self.filter_pupil_data(pupil_data)
@@ -154,7 +167,13 @@ class Gazer2D(GazerBase):
                 gaze_datum ={
                     ..., "norm_pos" : gaze_pos, ... 
                 } # topic(L?R?Bino?), norm_pos, confidence, timestep, base_data(pupil_match)
-                    # TODO: pupil_match는 뭐가 매칭된거지
+```
+Matching은 [matching.py](./pupil_src/shared_modules/gaze_mapping/matching.py)에서.
+```python
+class RealtimeMatcher:
+    def on_pupil_datum(self, p) -> T.Iterator:
+        # Confidence로 필터링하고 시간 맞춰서 가능하면 Binocular, 안되면 Monocular data로 p yield.
+        # Left, right 시간 맞춰서 matched data임.
 
 ```
 [pupil_data_relay.py](./pupil_src/shared_modules/pupil_data_relay.py)  
@@ -165,7 +184,56 @@ class Pupil_Data_Relay(System_Plugin_Base):
             gazer = self.g_pool.active_gaze_mapping_plugin
             for gaze_datum in gazer.map_pupil_to_gaze([pupil_datum]):
                 self.gaze_pub.send(gaze_datum)
-                recent_gaze_data.append(gaze_datum) # pupil ellipse data받아서 gaze data로 바꿔서 전송해주는 부분.
+                recent_gaze_data.append(gaze_datum) # pupil ellipse data받아서 gaze data로 바꿔서 전송.
+```
+
+# 4. Calibration
+[base_plugin.py](./pupil_src/shared_modules/calibration_choreography/base_plugin.py)
+```python
+class CalibrationChoreographyPlugin(Plugin):
+    def on_choreography_successfull(self, mode:ChoreographyMode, pupil_list, ref_list):
+        if mode == ChoreographyMode.CALIBRATION: 
+            calib_data = {"ref_list": ref_list, "pupil_list": pupil_list})
+            self._start_pluin(self.selected_gazer_class, calib_data = calib_data) 
+            # plugin_name 만들어서 notify_all(@ plugin.py Plugin class)로 쏴주면 plugin_list에 추가돼서 실행.
+```
+[marker_sindow_controller.py](./pupil_src/shared_modules/calibration_choreography/controller/marker_window_controller.py)
+```python
+_MARKER_CIRCLE_RGB_FEEDBACK_INVALID = (0.8, 0.0, 0.0) # 등으로 마커 크기, 색 등 지정.
+```
+[screen_marker_plugin.py](./pupil_src/shared_modules/calibration_choreography/screen_marker_plugin.py) 여기서 타겟 5개 생성.
+```python
+class ScreenMarkerChoreographyPlugin(MonitorSelectionMixin, CalibrationChoreographyPlugin):
+    def __init__(self,...,marker_scale):
+        self.__marker_window = MarkerWindowController(marker_scale=marker_scale) # 로 마커 생성되는 창 관리.
+```
+
+# 5. main.py
+[main.py](./pupil_src/main.py)
+```python
+# 여기서는 world.py, eye.py call하기만 함.
+def process_notification
+    # L368
+    if "notify.eye_process.should_start" in topic:
+        eye_id = notification["eye_id"]
+        Process(taget = eye, name=f"eye{eye_id}", args=...).start()
+    # L404
+    if "notify.world_process.should_start" in topic:
+        Process(target=world, name="world", args = ...)
+    
+"""
+from multiprocessing import Process, ...
+Process(target = func, args = {}).start하면 멀티프로세스로 함수 실행.
+"""
+```
+[world.py](./pupil_src/launchables/world.py)
+```python
+def world():
+    """
+    world video 읽고 plugin 호출 : 바깥 보는 카메라
+    출력: 
+        gaze: Gaze mapping으로 얻은 gaze data
+    """
 ```
 ---
 # 99. Gemini 정리
@@ -193,3 +261,4 @@ graph TD
   calibration math to project the raw pupil coordinates into gaze coordinates in the world coordinate space.
   6. Consumer Distribution: The resulting gaze coordinates are broadcasted under the gaze topic for real-time
   visualization overlays, network APIs, or disk recordings.
+
