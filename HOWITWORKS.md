@@ -4,7 +4,7 @@ Might be bullshit
     1. ./pupil_src/main.py 에서 pupil 관리, eye detection 등 plugin들 인스턴스화 후 IPC(Inter-Process Comm.)로 플러그인들 리스트 줄세워놓고 관리
     2. plugin.py에서 플러드인들 줄 관리, 실행
     3. eye.py에서 pupil detector 활용, eye video에서 동공 검출 (+ellpse fit)
-    4. gazer에서 pupil data로 gaze data 추론
+    4. gazer에서 pupil data로 gaze data 추론 (RITnet 버전은 Gazer2D만 사용 - 2d이미지에서 뽑은 data만 사용하니)
     5. world.py에서 gaze data와 world camera 맞춰서 화면에 어디인지(??)
     6. calibration_choreography 폴더에서 칼리 위한 마커 생성, gaze 데이터와 맞는지는 gazer.py에서 
     ???. Gazer는 pupil에서 gaze도 추론하고 해당 데이터와 marker의 GT가 맞는지도 검증하는건가???

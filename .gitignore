@@ -58,4 +58,8 @@ win_drv
 
 # pyenv local config
 .python-version
+A
 *.exe
+
+# adgbc ckpts
+pupil_src/shared_modules/pupil_detector_plugins/adgbc.pth 

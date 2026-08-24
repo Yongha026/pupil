@@ -24,7 +24,7 @@
 
 ### 질문 답변: Gazer는 pupil에서 gaze도 추론하고 해당 데이터와 marker의 GT가 맞는지도 검증하는건가?
 
-**네, 맞습니다!** Gazer 모델([gazer_base.py](file:///D:/School/4-3/pupil/pupil_src/shared_modules/gaze_mapping/gazer_base.py))은 동작하는 모드에 따라 다음과 같이 시선 추론과 오차 검증(Accuracy Test)을 모두 처리합니다.
+**네, 맞습니다!** Gazer 모델([gazer_base.py](./pupil_src/shared_modules/gaze_mapping/gazer_base.py))은 동작하는 모드에 따라 다음과 같이 시선 추론과 오차 검증(Accuracy Test)을 모두 처리합니다.
 
 1. **보정 단계 (Calibration):**
    * 사용자가 마커를 쳐다보며 데이터 수집이 끝나면, 수집된 마커의 화면 상 실제 물리적 위치(Ground Truth, GT)와 매칭된 시선의 동공 좌표(`calib_data`)를 활용해 매핑 함수(예: 2차 다항식 회귀 모델)를 피팅(`model.fit(X, Y)`)시킵니다.
