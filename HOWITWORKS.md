@@ -2,12 +2,12 @@
 
 # 0. Overall workflow
     1. ./pupil_src/main.py 에서 pupil 관리, eye detection 등 plugin들 인스턴스화 후 IPC(Inter-Process Comm.)로 플러그인들 리스트 줄세우기
-    2. plugin.py에서 플러드인들 줄 관리, 실행
-    3. eye.py에서 pupil detector 활용, eye video에서 동공 검출 (+ellpse fit)
-    4. gazer에서 pupil data로 gaze data 추론 (RITnet 버전은 Gazer2D만 사용 - 2d이미지에서 뽑은 data만 사용하니)
-    5. world.py에서 gaze data와 world camera 맞춰서 화면에 어디인지(??)
-    6. calibration_choreography 폴더에서 칼리 위한 마커 생성, gaze 데이터와 맞는지는 gazer.py에서 
+    2. plugin.py에서 플러드인들 리스트 관리 및 실행
+    3. eye.py에서 pupil detector plugin(2d) 활용, eye video에서 동공 검출 (+@: fit ellpse)
+    4. gazer에서 pupil data로 gaze data 추론 (RITnet 버전은 Gazer2D - 2d이미지에서 뽑은 data만 사용하니)
+    5. world.py에서 gaze data와 world camera 맞춰서 화면에 어디 보고 있는지(??)
     # TODO:  Gazer는 pupil에서 gaze도 추론하고 해당 데이터와 marker의 GT가 맞는지도 검증하는건가??? 정확한 코드 보기
+    6. calibration_choreography 폴더에서 칼리 위한 마커 생성(1 point, 5 point...) gaze 데이터와 맞는지는 gazer.py에서? world.py에서?
 
 # 1. Pupil detection - RITnet 버전(develop branch)
 **[detector_2d_plugin.py](./pupil_src/shared_modules/pupil_detector_plugins/detector_2d_plugin.py)**
@@ -36,11 +36,10 @@ class PupilDetectorPlugin(Plugin):
 ```python
 class Plugin:
     # 둘 다 부모클래스로 메소드 다 pass해서 껍데기만 쓰네? abstractmethod랑 뭐가 다르지
-    # ABC는 껍데기만 강제당해서 함수 넣기 불가. 부모 클래스는 함수 만들어서 상속 가능.
-    # 애네는 그냥 어플리케이션 같은데...?   
+    # ABC는 껍데기만 강제당해서 함수 넣기 불가(pass해야함). 부모 클래스는 함수 내용 채워서 상속 가능.
 class Plugin_List:
     def import_runtime_plugins(plugin_dir):
-    # 폴더 보면서 플러그인 가능성 있는 애들(.py, __init__있는 폴더) 싹다 임포트.
+    # 폴더 보면서 플러그인 가능성 있는 애들(.py, __init__ 존재하는 폴더) 싹다 임포트.
 ```
 **[pupil_detector_plugins.__init__.py](./pupil_src/shared_modules/pupil_detector_plugins/__init__.py)**
 ```python
@@ -52,7 +51,7 @@ def available_detector_plugins() -> T.List[T.Type[PupilDetectorPlugin]]:
 def eye(*args, **kwargs):
     
     """
-    Eye video 읽고 pupil 검출 : 눈 보는 카메라
+    Eye video 읽고 pupil 검출 : 눈 찍는 카메라
     출력:
         pupil.<eye_id>      : Pupil data
         frame.eye.<eye_id>  : Eye frames
@@ -100,7 +99,7 @@ def eye(*args, **kwargs):
 ```
 
 # 2. Pupil Data 어떻게 활용?
-zmq: Application. 여긴 내가 안 봐도 될듯 한디...
+zmq: IPC Application
 
 
 # 3. Gaze Mapping
@@ -223,7 +222,7 @@ def process_notification
     
 """
 from multiprocessing import Process, ...
-Process(target = func, args = {}).start하면 멀티프로세스로 함수 실행.
+Process(target = func, args = {}).start() 하면 멀티프로세스로 함수 실행.
 """
 ```
 [world.py](./pupil_src/launchables/world.py)
@@ -248,7 +247,7 @@ def world(...):
 # 99. Gemini 정리
 ### Brief Flow of the Total System
 
-graph TD
+graph TD  
     A[Camera Feed / Video Source] $\rightarrow$ |Capture Frame| B(Eye Process: eye.py)  
     B $\rightarrow$ |Calls recent_events| C(DetectorBasePlugin)  
     C $\rightarrow$ |Calls detect| D[Your Custom UNet Inference in detector_2d_plugin.py]  
