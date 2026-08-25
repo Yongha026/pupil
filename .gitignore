@@ -64,3 +64,4 @@ A
 
 # AD-GBC ckpts
 pupil_src/shared_modules/pupil_detector_plugins/adgbc_nn_best.pth
+*.pth
