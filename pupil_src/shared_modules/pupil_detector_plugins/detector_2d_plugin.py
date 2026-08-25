@@ -92,34 +92,17 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
         model_name = "densenet"
         model_path = "./best_model.pkl"
+        device_str = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = torch.device(device_str)
+
+        #################### AD-GBC ####################
+        # 3) AD-GBC 모델 load from .pth
         plugin_dir = os.path.dirname(__file__)
         model_path_adgbc = os.path.join(plugin_dir,"adgbc_nn_best.pth") # 따로 ckpt넣어야함(깃허브 용량이슈, .pth about 300mb)
         # ADGBC gdown
         # https://drive.google.com/file/d/1By1SsLnPVxvQ6CiJ5sBThfqcW-0o5OpN/view?usp=drive_link
-        device_str = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.device = torch.device(device_str)
-
-        # # 3) RITnet모델 로드
-        # #    (model_dict, get_predictions 등은 RITnet 예제에서 import 했다고 가정)
-        # if model_name not in model_dict:
-        #     logger.error(f"Model {model_name} not found. Valid: {list(model_dict.keys())}")
-        #     raise ValueError("Invalid model name.")
-        #
-        # if not os.path.exists(model_path):
-        #     logger.error(f"Model path {model_path} not found!")
-        #     raise FileNotFoundError(model_path)
-        #
-        # self.model = model_dict[model_name]().to(self.device)
-        # self.model.load_state_dict(torch.load(model_path))
-        # self.model.eval()
-
-        # 3) AD-GBC 모델 load from .pth
-        # model = archs_GBC.__dict__[config['arch']](num_classes=config['num_classes'],
-        #                                            input_channels=config['input_channels'],
-        #                                            deep_supervision=config['deep_supervision'])
         self.model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
-
         if os.path.exists(model_path_adgbc):
             try:
                 checkpoint = torch.load(model_path_adgbc, map_location=self.device, weights_only=False)
@@ -134,6 +117,26 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 logger.error(f"Failed to load AD-GBC: {e}")
         else:
             logger.warning(f"AD-GBC ckpt file not found at {model_path_adgbc}")
+
+        #################### RITnet ####################
+        # # 3) RITnet모델 로드
+        # #    (model_dict, get_predictions 등은 RITnet 예제에서 import 했다고 가정)
+        # self.device = torch.device('cpu')
+        # if model_name not in model_dict:
+        #     logger.error(f"Model {model_name} not found. Valid: {list(model_dict.keys())}")
+        #     raise ValueError("Invalid model name.")
+        #
+        # if not os.path.exists(model_path):
+        #     logger.error(f"Model path {model_path} not found!")
+        #     raise FileNotFoundError(model_path)
+        #
+        # self.model = model_dict[model_name]().to(self.device)
+        # self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+        # self.model.eval()
+
+        ################################################
+
+
 
         self.transform = torchvision.transforms.Compose(
             [
