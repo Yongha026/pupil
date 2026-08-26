@@ -11,7 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import numpy as np
 import os
-
+import time
 
 
 import glfw
@@ -85,6 +85,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
     ):
         super().__init__(g_pool=g_pool)
         self.detector_2d = detector_2d or Detector2D(properties or {})
+        self.latency_log = []
         """
         기존 __init__에 model_path, device, preview 등을 인자로 추가.
         """
@@ -154,6 +155,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         return init_dict
 
     def detect(self, frame, **kwargs):
+        # t_start = time.perf_counter()
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
 
@@ -179,6 +181,17 @@ class Detector2DPlugin(PupilDetectorPlugin):
             timestamp=frame.timestamp,
         )
 
+        # t_end = time.perf_counter()
+
+        proc_latency = (t_end - t_start) * 1000 # in milliseconds
+        # e2e_latency = (time.time() - frame.timestamp) * 1000
+
+        # self.latency_log.append({
+        #     "timestamp": frame.timestamp,
+        #     "processing_latency_ms": proc_latency,
+        #     # "e2e_latency_ms": e2e_latency
+        # })
+
         # Fill out 2D model data
         datum["ellipse"] = {}
         datum["ellipse"]["axes"] = result["ellipse"]["axes"]
@@ -188,6 +201,20 @@ class Detector2DPlugin(PupilDetectorPlugin):
         # print(end - start)
 
         return datum
+
+    def cleanup(self):
+        import csv
+        log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
+        try:
+            with open(log_path, "w", newline="") as f:
+                writer = csv.DictWriter(f,fieldnames=["method","timestamp","processing_latency_ms","e2e_latency_ms"])
+                # writer = csv.DictWriter(f,fieldnames=["timestamp","processing_latency_ms"])
+                writer.writeheader()
+                writer.writerows(self.latency_log)
+                logger.info(f"Saved Latency to {log_path}")
+        except Exception as e:
+            logger.error(f"Failed to save log during cleanup: {e}")
+        super().cleanup()
 
     def convert_mjpeg_to_numpy(self, frame):
         try:
@@ -360,6 +387,8 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
     #################### Hongik IULab ###################################
     def detect_RITnet(self, frame, **kwargs):
+
+        t_start = time.perf_counter()
         """
         RITnet으로 동공을 검출하고, 결과를 Pupil Labs datum 형식으로 반환하는 예시.
         1) RITnet 세그멘테이션
@@ -367,17 +396,24 @@ class Detector2DPlugin(PupilDetectorPlugin):
         3) Contour + fitEllipse
         4) Pupil Labs 결과 dict(datum) 생성
         """
-
+        pupil_detection_method = "RITnet"
+        print("RITnet")
         # ---------- 1) 기본 검사 및 그레이 변환 ----------
-        if not isinstance(frame, np.ndarray):
+        if hasattr(frame, "gray"):
+            gray = frame.gray
+        elif isinstance(frame, np.ndarray):
+            if len(frame.shape) == 3:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = frame
+        else:
             try:
                 img = self.convert_mjpeg_to_numpy(frame)
-            except ValueError as e:
-                print(f"Error converting MJPEGFrame: {e}")
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            except Exception as e:
+                logger.error(f"Error converting MJPEGFrame: {e}")
                 return None
 
-        start_time = time.time()
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = gray.astype(np.uint8)
 
         # ---------- 2) RITnet 전처리 (감마+CLAHE+Normalize) + 추론 ----------
@@ -471,9 +507,20 @@ class Detector2DPlugin(PupilDetectorPlugin):
         datum["ellipse"]["angle"] = result["ellipse"]["angle"]
         datum["ellipse"]["center"] = result["ellipse"]["center"]
 
+        t_end = time.perf_counter()
+        proc_latency = (t_end - t_start) * 1000
+        e2e_latency = (time.time() - frame.timestamp) * 1000
+        self.latency_log.append({
+            "method": "RITnet",
+            "timestamp": frame.timestamp,
+            "processing_latency_ms": proc_latency,
+            "e2e_latency_ms": e2e_latency
+        })
+
         return datum
 
     def detect_ADGBC(self, frame, **kwargs):
+        t_start = time.perf_counter()
         """
         AD-GBC로 동공을 검출하고, Pupil Labs datum 형태로 반환.
         1) BGR → GRAY
@@ -573,6 +620,15 @@ class Detector2DPlugin(PupilDetectorPlugin):
             "angle": result["ellipse"]["angle"],
             "center": result["ellipse"]["center"],
         }
+        t_end = time.perf_counter()
+        proc_latency = (t_end - t_start) * 1000
+        e2e_latency = (time.time() - frame.timestamp) * 1000
+        self.latency_log.append({
+            "method":"AD-GBC",
+            "timestamp": frame.timestamp,
+            "processing_latency_ms": proc_latency,
+            "e2e_latency_ms": e2e_latency
+        })
         return datum
     #################################################################
 

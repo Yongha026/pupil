@@ -133,16 +133,16 @@ class PupilDetectorPlugin(Plugin):
         # )
 
         ############# Hongik IULab #############################
-        # detection_result = self.detect_RITnet(
-        #
-        #     frame=frame,
-        #     # TODO: workaround to get 2D data into pye3D for now
-        #     previous_detection_results=previous_detection_results,
-        # )
-        detection_result = self.detect_ADGBC(
-                frame=frame,
-                previous_detection_results=previous_detection_results,
-            )
+        detection_result = self.detect_RITnet(
+
+            frame=frame,
+            # TODO: workaround to get 2D data into pye3D for now
+            previous_detection_results=previous_detection_results,
+        )
+        # detection_result = self.detect_ADGBC(
+        #         frame=frame,
+        #         previous_detection_results=previous_detection_results,
+        #     )
         #########################################################
 
         # Append the new detection result to the previous results

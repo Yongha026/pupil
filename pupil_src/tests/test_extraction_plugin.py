@@ -57,11 +57,13 @@ class MockFrame:
         self.gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
         self.height, self.width = bgr_img.shape[:2]
         self.timestamp = timestamp
+        # self.jpeg_buffer = [0]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Test Detector2DPlugin pupil extraction offline using plugin functions")
     parser.add_argument('--img_path', required=True, help="Path to input eye image")
     parser.add_argument('--save_path', default="plugin_test_result.png", help="Path to save visual results")
+    parser.add_argument('--which', default = "adgbc", help = "Which detector to use | choices: adgbc, ritnet, both(for timing only, doesn't save)")
     return parser.parse_args()
 
 def main():
@@ -81,10 +83,19 @@ def main():
     print("Instantiating Detector2DPlugin...")
     plugin = Detector2DPlugin(g_pool=g_pool)
 
-    # 6. Perform detection using the plugin's own detect_ADGBC function
-    print("Running detection using plugin.detect_ADGBC...")
-    datum = plugin.detect_ADGBC(frame)
-
+    # 6. Perform detection using the plugin's own detect functions
+    if args.which == "adgbc":
+        print("Running detection using plugin.detect_ADGBC...")
+        datum = plugin.detect_ADGBC(frame)
+    elif args.which == "ritnet":
+        print("Running detection using plugin.detect_RITnet...")
+        datum = plugin.detect_RITnet(frame)
+    elif args.which == "both":
+        print("Running detection using plugin.detect_both...")
+        datum = plugin.detect_ADGBC(frame)
+        _ = plugin.detect_RITnet(frame)
+    else:
+        raise ValueError("Unknown detection method")
     # Print results
     print("\n--- Detection Result Datum ---")
     for k, v in datum.items():
@@ -118,9 +129,24 @@ def main():
     axes[1].axis('off')
 
     plt.tight_layout()
-    plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
+    if not args.which == "both":
+        plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
+        print(f"Visual results with detection method {args.which} successfully saved to: {args.save_path}")
+    else: print("Not saved since args.which == both")
     plt.close()
-    print(f"Visual results successfully saved to: {args.save_path}")
 
+    plugin.cleanup()
 if __name__ == '__main__':
     main()
+
+'''
+np.mean(adgbc)
+np.float64(1091.0975400358438) # ms 단위
+np.var(adgbc)
+np.float64(37212.80494607989)
+
+np.mean(rit)
+np.float64(980.738199991174) # ms 단위
+np.var(rit)
+np.float64(266492.158255929)
+'''

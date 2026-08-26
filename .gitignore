@@ -56,6 +56,8 @@ deployment/dist/
 win_drv
 .vs
 .venv*
+*.csv
+*.jpg
 
 # pyenv local config
 .python-version
