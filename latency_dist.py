@@ -8,17 +8,16 @@ parser = argparse.ArgumentParser()
 parser.add_argument("CSVPATH", type=str, help="Path to csv file")
 args = parser.parse_args()
 
-f = open(args.CSVPATH, 'r')
-reader = csv.reader(f)
-
 adgbc = np.array([])
 ritnet = np.array([])
 
-for row in reader:
-    if row[0] == "AD-GBC":
-        adgbc = np.append(adgbc, float(row[2]))
-    elif row[0] == "RITnet":
-        ritnet = np.append(ritnet, float(row[2]))
+with open(args.CSVPATH, 'r', newline='') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        if row["method"] == "AD-GBC":
+            adgbc = np.append(adgbc, float(row["processing_latency_ms"]))
+        elif row["method"] == "RITnet":
+            ritnet = np.append(ritnet, float(row["processing_latency_ms"]))
 
 
 print(f"AD-GBC result with total {len(adgbc)} data: {np.mean(adgbc):.4f} ± {np.std(adgbc):.4f}")
