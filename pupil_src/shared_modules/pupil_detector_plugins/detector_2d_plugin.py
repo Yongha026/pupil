@@ -207,7 +207,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
         try:
             with open(log_path, "w", newline="") as f:
-                writer = csv.DictWriter(f,fieldnames=["method","timestamp","processing_latency_ms","e2e_latency_ms"])
+                writer = csv.DictWriter(f,fieldnames=["method","timestamp","processing_latency_ms","e2e_latency_ms","t_start","t_end"])
                 # writer = csv.DictWriter(f,fieldnames=["timestamp","processing_latency_ms"])
                 writer.writeheader()
                 writer.writerows(self.latency_log)
@@ -396,8 +396,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         3) Contour + fitEllipse
         4) Pupil Labs 결과 dict(datum) 생성
         """
-        pupil_detection_method = "RITnet"
-        print("RITnet")
+
         # ---------- 1) 기본 검사 및 그레이 변환 ----------
         if hasattr(frame, "gray"):
             gray = frame.gray
@@ -514,7 +513,9 @@ class Detector2DPlugin(PupilDetectorPlugin):
             "method": "RITnet",
             "timestamp": frame.timestamp,
             "processing_latency_ms": proc_latency,
-            "e2e_latency_ms": e2e_latency
+            "e2e_latency_ms": e2e_latency,
+            "t_start": t_start,
+            "t_end": t_end,
         })
 
         return datum
@@ -624,10 +625,12 @@ class Detector2DPlugin(PupilDetectorPlugin):
         proc_latency = (t_end - t_start) * 1000
         e2e_latency = (time.time() - frame.timestamp) * 1000
         self.latency_log.append({
-            "method":"AD-GBC",
+            "method": "AD-GBC",
             "timestamp": frame.timestamp,
             "processing_latency_ms": proc_latency,
-            "e2e_latency_ms": e2e_latency
+            "e2e_latency_ms": e2e_latency,
+            "t_start": t_start,
+            "t_end": t_end,
         })
         return datum
     #################################################################

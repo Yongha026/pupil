@@ -63,7 +63,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Test Detector2DPlugin pupil extraction offline using plugin functions")
     parser.add_argument('--img_path', required=True, help="Path to input eye image")
     parser.add_argument('--save_path', default="plugin_test_result.png", help="Path to save visual results")
-    parser.add_argument('--which', default = "adgbc", help = "Which detector to use | choices: adgbc, ritnet, both(for timing only, doesn't save)")
+    parser.add_argument('--which', default = "both", help = "Which detector to use | choices: adgbc, ritnet, both(for timing only, doesn't save)")
     return parser.parse_args()
 
 def main():
