@@ -183,7 +183,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
 
         # t_end = time.perf_counter()
 
-        proc_latency = (t_end - t_start) * 1000 # in milliseconds
+        # proc_latency = (t_end - t_start) * 1000 # in milliseconds
         # e2e_latency = (time.time() - frame.timestamp) * 1000
 
         # self.latency_log.append({
@@ -203,18 +203,19 @@ class Detector2DPlugin(PupilDetectorPlugin):
         return datum
 
     def cleanup(self):
-        import csv
-        log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
-        try:
-            with open(log_path, "a", newline="") as f:
-                writer = csv.DictWriter(f,fieldnames=["method","timestamp","processing_latency_ms","e2e_latency_ms","t_start","t_end"])
-                # writer = csv.DictWriter(f,fieldnames=["timestamp","processing_latency_ms"])
-                writer.writeheader()
-                writer.writerows(self.latency_log)
-                logger.info(f"Saved Latency to {log_path}")
-        except Exception as e:
-            logger.error(f"Failed to save log during cleanup: {e}")
+        # import csv
+        # log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
+        # try:
+        #     with open(log_path, "a", newline="") as f:
+        #         writer = csv.DictWriter(f,fieldnames=["method","timestamp","processing_latency_ms","e2e_latency_ms","t_start","t_end"])
+        #         # writer = csv.DictWriter(f,fieldnames=["timestamp","processing_latency_ms"])
+        #         writer.writeheader()
+        #         writer.writerows(self.latency_log)
+        #         logger.info(f"Saved Latency to {log_path}")
+        # except Exception as e:
+        #     logger.error(f"Failed to save log during cleanup: {e}")
         super().cleanup()
+
 
     def convert_mjpeg_to_numpy(self, frame):
         try:
