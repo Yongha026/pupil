@@ -82,9 +82,9 @@ def main():
     print("Instantiating Detector2DPlugin...")
     plugin = Detector2DPlugin(g_pool=g_pool)
 
-    # 6. Perform detection using the plugin's unified detect_MODEL function
-    print("Running detection using plugin.detect_MODEL...")
-    datum = plugin.detect_MODEL(frame)
+    # 6. Perform detection using the plugin's unified detect function
+    print("Running detection using plugin.detect...")
+    datum = plugin.detect(frame)
 
     # Print results
     print("\n--- Detection Result Datum ---")
@@ -112,7 +112,7 @@ def main():
     # Discard first & last inferecne time (Loading model / Garbage collection)
     plugin.cleanup()
     for i in range(100):
-        plugin.detect_MODEL(frame)
+        plugin.detect(frame)
         plugin.cleanup()
 
 
