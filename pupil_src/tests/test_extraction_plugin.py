@@ -61,9 +61,8 @@ class MockFrame:
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Test Detector2DPlugin pupil extraction offline using plugin functions")
-    parser.add_argument('--img_path', default= "pupil.jpg",required=True, help="Path to input eye image")
+    parser.add_argument('--img_path', default="pupil.jpg", required=True, help="Path to input eye image")
     parser.add_argument('--save_path', default="plugin_test_result.png", help="Path to save visual results")
-    parser.add_argument('--which', default = "both", help = "Which detector to use | choices: adgbc, ritnet, both(for timing only, doesn't save)")
     return parser.parse_args()
 
 def main():
@@ -83,19 +82,10 @@ def main():
     print("Instantiating Detector2DPlugin...")
     plugin = Detector2DPlugin(g_pool=g_pool)
 
-    # 6. Perform detection using the plugin's own detect functions
-    if args.which == "adgbc":
-        print("Running detection using plugin.detect_ADGBC...")
-        datum = plugin.detect_ADGBC(frame)
-    elif args.which == "ritnet":
-        print("Running detection using plugin.detect_RITnet...")
-        datum = plugin.detect_RITnet(frame)
-    elif args.which == "both":
-        print("Running detection using plugin.detect_both...")
-        datum = plugin.detect_ADGBC(frame)
-        _ = plugin.detect_RITnet(frame)
-    else:
-        raise ValueError("Unknown detection method")
+    # 6. Perform detection using the plugin's unified detect_MODEL function
+    print("Running detection using plugin.detect_MODEL...")
+    datum = plugin.detect_MODEL(frame)
+
     # Print results
     print("\n--- Detection Result Datum ---")
     for k, v in datum.items():
@@ -129,10 +119,8 @@ def main():
     axes[1].axis('off')
 
     plt.tight_layout()
-    if not args.which == "both":
-        plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
-        print(f"Visual results with detection method {args.which} successfully saved to: {args.save_path}")
-    else: print("Not saved since args.which == both")
+    # plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
+    print(f"Visual results successfully commented out to: {args.save_path}")
     plt.close()
 
     plugin.cleanup()

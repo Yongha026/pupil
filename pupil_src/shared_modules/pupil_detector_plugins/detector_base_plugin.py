@@ -133,7 +133,7 @@ class PupilDetectorPlugin(Plugin):
         # )
 
         ############# Hongik IULab #############################
-        detection_result = self.detect_RITnet(
+        detection_result = self.detect_MODEL(
 
             frame=frame,
             # TODO: workaround to get 2D data into pye3D for now

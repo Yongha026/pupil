@@ -60,6 +60,8 @@ TILE_GRID_SIZE = 8
 EYE_CLASS = 1
 logger = logging.getLogger(__name__)
 
+DETECT_MODEL = "adgbc" # adgbc, nn_ritnet, nn_unext, 2dcpp
+
 
 class Detector2DPlugin(PupilDetectorPlugin):
     pupil_detection_identifier = "2d"
@@ -93,89 +95,79 @@ class Detector2DPlugin(PupilDetectorPlugin):
         """
 
         plugin_dir = os.path.dirname(__file__)
-        model_name = "densenet"
-        # model_path = "./best_model.pkl"
-        # adgbc, unext, ritnet ckpt는 gdown으로 넣어야함(깃허브 용량이슈)
-        model_path_ritnet = os.path.join(plugin_dir, "ritnet_nn_best.pth")
-        model_path_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
-        model_path_adgbc = os.path.join(plugin_dir,"adgbc_nn_best.pth")
         device_str = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device_str)
+        self.models = {}
 
-        #################### AD-GBC ####################
-        # 3) AD-GBC 모델 load from .pth
-        # ADGBC gdown
-        # https://drive.google.com/file/d/1By1SsLnPVxvQ6CiJ5sBThfqcW-0o5OpN/view?usp=drive_link
+        model_path_adgbc = os.path.join(plugin_dir, "adgbc_nn_best.pth")
+        model_path_ritnet_orig = os.path.join(plugin_dir, "best_model.pkl")
+        model_path_nn_ritnet = os.path.join(plugin_dir, "ritnet_nn_best.pth")
+        model_path_nn_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
 
-        self.model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
-        if os.path.exists(model_path_adgbc):
+        # Load only the specified DETECT_MODEL to save memory and startup time
+        if DETECT_MODEL == "adgbc":
+            # 1) AD-GBC Model
             try:
-                checkpoint = torch.load(model_path_adgbc, map_location=self.device, weights_only=False)
-                if isinstance(checkpoint, dict) and "network_weights" in checkpoint:
-                    state_dict = checkpoint["network_weights"]
+                model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+                if os.path.exists(model_path_adgbc):
+                    checkpoint = torch.load(model_path_adgbc, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["adgbc"] = model
+                    logger.info("Loaded AD-GBC weights successfully")
                 else:
-                    state_dict = checkpoint
-                self.model.load_state_dict(state_dict)
-                self.model.eval()
-                logger.info("Loaded AD-GBC weights successfully")
+                    logger.warning(f"AD-GBC ckpt file not found at {model_path_adgbc}")
             except Exception as e:
                 logger.error(f"Failed to load AD-GBC: {e}")
-        else:
-            logger.warning(f"AD-GBC ckpt file not found at {model_path_adgbc}")
 
-        #################### RITnet ####################
-        # # 3) RITnet모델 로드
-        # #    (model_dict, get_predictions 등은 RITnet 예제에서 import 했다고 가정)
-        # self.device = torch.device('cpu')
-        # if model_name not in model_dict:
-        #     logger.error(f"Model {model_name} not found. Valid: {list(model_dict.keys())}")
-        #     raise ValueError("Invalid model name.")
-        #
-        # if not os.path.exists(model_path):
-        #     logger.error(f"Model path {model_path} not found!")
-        #     raise FileNotFoundError(model_path)
-        #
-        # self.model = model_dict[model_name]().to(self.device)
-        # self.model.load_state_dict(torch.load(model_path, map_location=self.device))
-        # self.model.eval()
+        elif DETECT_MODEL == "ritnet":
+            # 2) RITnet Model (Original Densenet)
+            try:
+                model = model_dict['densenet']().to(self.device)
+                if os.path.exists(model_path_ritnet_orig):
+                    model.load_state_dict(torch.load(model_path_ritnet_orig, map_location=self.device, weights_only=False))
+                    model.eval()
+                    self.models["ritnet"] = model
+                    logger.info("Loaded RITnet (original) weights successfully")
+                else:
+                    logger.warning(f"RITnet original ckpt file not found at {model_path_ritnet_orig}")
+            except Exception as e:
+                logger.error(f"Failed to load RITnet: {e}")
 
+        elif DETECT_MODEL == "nn_ritnet":
+            # 3) nnRITnet Model
+            try:
+                model = nn_ritnet.DenseNet2D(in_channels=1, out_channels=4, dropout=True, prob=0.2, deep_supervision=False).to(self.device)
+                if os.path.exists(model_path_nn_ritnet):
+                    checkpoint = torch.load(model_path_nn_ritnet, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["nn_ritnet"] = model
+                    logger.info("Loaded nnRITnet weights successfully")
+                else:
+                    logger.warning(f"nnRITnet ckpt file not found at {model_path_nn_ritnet}")
+            except Exception as e:
+                logger.error(f"Failed to load nnRITnet: {e}")
 
-        #################### nnRITnet ####################
-        # https://drive.google.com/file/d/1AvLUJj7e4Rfj61BNLzvDGl0pciJAfubq/view?usp=drive_link
+        elif DETECT_MODEL == "nn_unext":
+            # 4) UNeXt Model
+            try:
+                model = nn_unext.UNext(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+                if os.path.exists(model_path_nn_unext):
+                    checkpoint = torch.load(model_path_nn_unext, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["nn_unext"] = model
+                    logger.info("Loaded UNeXt weights successfully")
+                else:
+                    logger.warning(f"UNeXt ckpt file not found at {model_path_nn_unext}")
+            except Exception as e:
+                logger.error(f"Failed to load UNeXt: {e}")
 
-        # self.model = nn_ritnet.DenseNet2D(dropout=True, prob=0.2,enable_deep_supervision=False).to(self.device)
-        # if os.path.exists(model_path_ritnet):
-        #     try:
-        #         checkpoint = torch.load(model_path_ritnet, map_location=self.device, weights_only=False)
-        #         if isinstance(checkpoint, dict) and "network_weights" in checkpoint:
-        #             state_dict = checkpoint["network_weights"]
-        #         else:
-        #             state_dict = checkpoint
-        #         self.model.load_state_dict(state_dict)
-        #         self.model.eval()
-        #         logger.info("Loaded nnRITnet weights successfully")
-        #     except Exception as e:
-        #         logger.error(f"Failed to load nnRITnet: {e}")
-        # else:
-        #     logger.warning(f"nnRITnet ckpt file not found at {model_path_ritnet}")
-        #################### UNeXt ####################
-        # https://drive.google.com/file/d/1wRdTBIjoCzbOPh0EW_-bwBQEECGBEMRW/view?usp=drive_link
-
-        # self.model = nn_unext.UNext(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
-        # if os.path.exists(model_path_unext):
-        #     try:
-        #         checkpoint = torch.load(model_path_unext, map_location=self.device, weights_only=False)
-        #         if isinstance(checkpoint, dict) and "network_weights" in checkpoint:
-        #             state_dict = checkpoint["network_weights"]
-        #         else:
-        #             state_dict = checkpoint
-        #         self.model.load_state_dict(state_dict)
-        #         self.model.eval()
-        #         logger.info("Loaded nn_unext weights successfully")
-        #     except Exception as e:
-        #         logger.error(f"Failed to load nn_unext: {e}")
-        # else:
-        #     logger.warning(f"nn_unext ckpt file not found at {model_path_unext}")
+        self.active_model = DETECT_MODEL
 
         ################################################################################################
 
@@ -197,65 +189,153 @@ class Detector2DPlugin(PupilDetectorPlugin):
         return init_dict
 
     def detect(self, frame, **kwargs):
-        # t_start = time.perf_counter()
-        # convert roi-plugin to detector roi
-        roi = Roi(*self.g_pool.roi.bounds)
+        if not DETECT_MODEL == "2dcpp":
+            return self.detect_MODEL(frame, **kwargs)
+        else:
+            # convert roi-plugin to detector roi
+            roi = Roi(*self.g_pool.roi.bounds)
 
-        debug_img = frame.bgr if self.g_pool.display_mode == "algorithm" else None
+            debug_img = frame.bgr if self.g_pool.display_mode == "algorithm" else None
+            result = self.detector_2d.detect(
+                gray_img=frame.gray,
+                color_img=debug_img,
+                roi=roi,
+            )
 
-        # start = time.time()
-        result = self.detector_2d.detect(
-            gray_img=frame.gray,
-            color_img=debug_img,
-            roi=roi,
+            norm_pos = normalize(
+                result["location"], (frame.width, frame.height), flip_y=True
+            )
+
+            # Create basic pupil datum
+            datum = self.create_pupil_datum(
+                norm_pos=norm_pos,
+                diameter=result["diameter"],
+                confidence=result["confidence"],
+                timestamp=frame.timestamp,
+            )
+
+            # Fill out 2D model data
+            datum["ellipse"] = {}
+            datum["ellipse"]["axes"] = result["ellipse"]["axes"]
+            datum["ellipse"]["angle"] = result["ellipse"]["angle"]
+            datum["ellipse"]["center"] = result["ellipse"]["center"]
+
+            return datum
+
+    def detect_MODEL(self, frame, model_name=None, **kwargs):
+        # Determine model to use
+        model_name = model_name or self.active_model
+        model = self.models.get(model_name)
+        if model is None:
+            logger.error(f"Model '{model_name}' is not loaded/available!")
+            return {
+                "location": (0.0, 0.0),
+                "diameter": 0.0,
+                "confidence": 0.0,
+                "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
+            }
+
+        # 1) Frame preprocessing (robust check)
+        if hasattr(frame, "gray"):
+            gray = frame.gray
+        elif isinstance(frame, np.ndarray):
+            if len(frame.shape) == 3:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = frame
+        else:
+            try:
+                img = self.convert_mjpeg_to_numpy(frame)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            except Exception as e:
+                logger.error(f"Error converting MJPEGFrame: {e}")
+                return None
+
+        gray = gray.astype(np.uint8)
+
+        # 2) Preprocess -> Tensor
+        tensor = self.get_img(gray).unsqueeze(0).to(self.device)  # (1, 1, H, W)
+
+        # 3) Inference
+        with torch.no_grad():
+            output = model(tensor)
+
+        # 4) Label map extraction
+        predict = get_predictions(output)  # (1, H, W)
+        predict_2d = predict[0].cpu().numpy()  # (H, W)
+
+        # 5) Pupil mask extraction (class 3)
+        pupil_mask = np.zeros_like(predict_2d, dtype=np.uint8)
+        pupil_mask[predict_2d == 3] = 255
+
+        # 6) Find contours (using RETR_EXTERNAL and CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            pupil_mask,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
         )
 
+        if not contours:
+            result = {
+                "location": (0.0, 0.0),
+                "diameter": 0.0,
+                "confidence": 0.0,
+                "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
+            }
+        else:
+            best_contour = max(contours, key=cv2.contourArea)
+            if len(best_contour) < 5:
+                result = {
+                    "location": (0.0, 0.0),
+                    "diameter": 0.0,
+                    "confidence": 0.0,
+                    "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
+                }
+            else:
+                (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
+                result = {
+                    "location": (float(cx), float(cy)),
+                    "diameter": float(MA),
+                    "confidence": 1.0,
+                    "ellipse": {
+                        "axes": (float(MA), float(ma)),
+                        "angle": float(angle_deg),
+                        "center": (float(cx), float(cy)),
+                    },
+                }
 
-        norm_pos = normalize(
-            result["location"], (frame.width, frame.height), flip_y=True
-        )
-
-        # Create basic pupil datum
+        # 7) Create Pupil Labs datum
+        norm_pos = normalize(result["location"], (frame.width, frame.height), flip_y=True)
         datum = self.create_pupil_datum(
             norm_pos=norm_pos,
             diameter=result["diameter"],
             confidence=result["confidence"],
             timestamp=frame.timestamp,
         )
-
-        # t_end = time.perf_counter()
-
-        # proc_latency = (t_end - t_start) * 1000 # in milliseconds
-        # e2e_latency = (time.time() - frame.timestamp) * 1000
-
-        # self.latency_log.append({
-        #     "timestamp": frame.timestamp,
-        #     "processing_latency_ms": proc_latency,
-        #     # "e2e_latency_ms": e2e_latency
-        # })
-
-        # Fill out 2D model data
-        datum["ellipse"] = {}
-        datum["ellipse"]["axes"] = result["ellipse"]["axes"]
-        datum["ellipse"]["angle"] = result["ellipse"]["angle"]
-        datum["ellipse"]["center"] = result["ellipse"]["center"]
-        # end = time.time()
-        # print(end - start)
+        datum["ellipse"] = {
+            "axes": result["ellipse"]["axes"],
+            "angle": result["ellipse"]["angle"],
+            "center": result["ellipse"]["center"],
+        }
 
         return datum
 
     def cleanup(self):
-        # import csv
-        # log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
-        # try:
-        #     with open(log_path, "a", newline="") as f:
-        #         writer = csv.DictWriter(f,fieldnames=["method","timestamp","processing_latency_ms","e2e_latency_ms","t_start","t_end"])
-        #         # writer = csv.DictWriter(f,fieldnames=["timestamp","processing_latency_ms"])
-        #         writer.writeheader()
-        #         writer.writerows(self.latency_log)
-        #         logger.info(f"Saved Latency to {log_path}")
-        # except Exception as e:
-        #     logger.error(f"Failed to save log during cleanup: {e}")
+        if self.latency_log:
+            import csv
+            log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
+            try:
+                with open(log_path, "w", newline="") as f:
+                    writer = csv.DictWriter(
+                        f,
+                        fieldnames=["plugin", "timestamp", "processing_latency_ms", "e2e_latency_ms", "t_start", "t_end"],
+                        extrasaction="ignore"
+                    )
+                    writer.writeheader()
+                    writer.writerows(self.latency_log)
+                logger.info(f"Saved Latency to {log_path}")
+            except Exception as e:
+                logger.error(f"Failed to save log during cleanup: {e}")
         super().cleanup()
 
 
@@ -428,332 +508,6 @@ class Detector2DPlugin(PupilDetectorPlugin):
         else:
             return obj
 
-    #################### Hongik IULab ###################################
-    def detect_RITnet(self, frame, **kwargs):
-
-        t_start = time.perf_counter()
-        """
-        RITnet으로 동공을 검출하고, 결과를 Pupil Labs datum 형식으로 반환하는 예시.
-        1) RITnet 세그멘테이션
-        2) 동공 라벨 -> 이진 마스크
-        3) Contour + fitEllipse
-        4) Pupil Labs 결과 dict(datum) 생성
-        """
-
-        # ---------- 1) 기본 검사 및 그레이 변환 ----------
-        if hasattr(frame, "gray"):
-            gray = frame.gray
-        elif isinstance(frame, np.ndarray):
-            if len(frame.shape) == 3:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            else:
-                gray = frame
-        else:
-            try:
-                img = self.convert_mjpeg_to_numpy(frame)
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            except Exception as e:
-                logger.error(f"Error converting MJPEGFrame: {e}")
-                return None
-
-        gray = gray.astype(np.uint8)
-
-        # ---------- 2) RITnet 전처리 (감마+CLAHE+Normalize) + 추론 ----------
-        img_tensor = self.get_img(gray)  # shape=[1,H,W]
-        data = img_tensor.unsqueeze(0).to(self.device)  # shape=[1,1,H,W]
-
-        with torch.no_grad():
-            # start_time = time.time()
-            output = self.model(data)  # 예: shape=[1,4,H,W]
-            # end_time = time.time()
-            # print(1 / (end_time - start_time))
-
-
-        predict = get_predictions(output)  # shape=[1,H,W]
-        predict_2d = predict[0].cpu().numpy()  # shape=[H,W], 라벨(0..3)
-
-        # ---------- 3) 동공 라벨(3)만 추출 -> 이진 마스크 (0 or 255) ----------
-        pupil_mask = np.zeros_like(predict_2d, dtype=np.uint8)
-        # 만약 동공 라벨이 1이라면: pupil_mask[predict_2d == 1] = 255
-        pupil_mask[predict_2d == 3] = 255
-
-        # ---------- 4) findContours + fitEllipse ----------
-        contours, _ = cv2.findContours(
-            pupil_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
-        )
-        end_time = time.time()
-        # print(1/(end_time - start_time))
-
-        if not contours:
-            # 동공 미검출 -> Pupil Labs 표준 dict
-            result = {
-                "location": (0.0, 0.0),
-                "diameter": 0.0,
-                "confidence": 0.0,
-                "ellipse": {
-                    "axes": (0.0, 0.0),
-                    "angle": 0.0,
-                    "center": (0.0, 0.0),
-                },
-            }
-        else:
-            # 가장 큰 컨투어 선택
-            best_contour = max(contours, key=cv2.contourArea)
-            if len(best_contour) < 5:
-                # fitEllipse는 최소 5개 점 필요
-                result = {
-                    "location": (0.0, 0.0),
-                    "diameter": 0.0,
-                    "confidence": 0.0,
-                    "ellipse": {
-                        "axes": (0.0, 0.0),
-                        "angle": 0.0,
-                        "center": (0.0, 0.0),
-                    },
-                }
-            else:
-                ellipse = cv2.fitEllipse(best_contour)  # ((cx, cy),(MA, ma), angleDeg)
-                (cx, cy), (MA, ma), angle_deg = ellipse
-
-                # 간단히 confidence=1.0, 필요시 support ratio 계산 가능
-                conf_val = 1.0
-
-                result = {
-                    "location": (float(cx), float(cy)),
-                    "diameter": float(MA),  # 장축을 diameter로
-                    "confidence": conf_val,
-                    "ellipse": {
-                        "axes": (float(MA), float(ma)),
-                        "angle": float(angle_deg),
-                        "center": (float(cx), float(cy)),
-                    },
-                }
-
-        # ---------- 5) Pupil Labs 최종 datum 생성 ----------
-        # location -> (px,py), normalize => (x',y') in [0..1]
-        norm_pos = normalize(
-            result["location"], (frame.width, frame.height), flip_y=True
-        )
-
-        # create_pupil_datum(...) => Pupil Labs 'datum' 형식
-        datum = self.create_pupil_datum(
-            norm_pos=norm_pos,
-            diameter=result["diameter"],
-            confidence=result["confidence"],
-            timestamp=frame.timestamp,
-        )
-
-        # ellipse 정보 채워넣기
-        datum["ellipse"] = {}
-        datum["ellipse"]["axes"] = result["ellipse"]["axes"]
-        datum["ellipse"]["angle"] = result["ellipse"]["angle"]
-        datum["ellipse"]["center"] = result["ellipse"]["center"]
-
-        # t_end = time.perf_counter()
-        # proc_latency = (t_end - t_start) * 1000
-        # e2e_latency = (time.time() - frame.timestamp) * 1000
-        # self.latency_log.append({
-        #     "method": "RITnet",
-        #     "timestamp": frame.timestamp,
-        #     "processing_latency_ms": proc_latency,
-        #     "e2e_latency_ms": e2e_latency,
-        #     "t_start": t_start,
-        #     "t_end": t_end,
-        # })
-
-        return datum
-
-    def detect_ADGBC(self, frame, **kwargs):
-        t_start = time.perf_counter()
-        """
-        AD-GBC로 동공을 검출하고, Pupil Labs datum 형태로 반환.
-        1) BGR → GRAY
-        2) get_img() → Tensor
-        3) 모델 추론
-        4) get_predictions → (1, H, W) 라벨 맵
-        5) 동공 라벨(3) 이진 마스크 → 컨투어+fitEllipse
-        6) Pupil Labs datum 생성
-        """
-        ### Gemini fix####
-        # if not isinstance(frame, np.ndarray):
-        #     try:
-        #         img = self.convert_mjpeg_to_numpy(frame)
-        #     except ValueError as e:
-        #         print(f"Error converting MJPEGFrame: {e}")
-        #         return None
-        # else:
-        #     img = frame
-        if hasattr(frame, "gray"):
-            gray = frame.gray
-        elif isinstance(frame, np.ndarray):
-            if len(frame.shape) == 3:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            else:
-                gray = frame
-        else:
-            try:
-                img = self.convert_mjpeg_to_numpy(frame)
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            except Exception as e:
-                logger.error(f"Error converting MJPEGFrame: {e}")
-                return None
-        #### End Gemini Fix########
-
-        gray = gray.astype(np.uint8)
-
-        # 1) 전처리 → Tensor (GPU)
-        tensor = self.get_img(gray).unsqueeze(0).to(self.device)  # (1, 1, H, W)
-
-        # 2) 추론 (GPU)
-        with torch.no_grad():
-            output = self.model(tensor)
-
-        # 3) 라벨 맵 추출
-        predict = get_predictions(output)  # (1, H, W)
-        predict_2d = predict[0].cpu().numpy()  # (H, W)
-
-        # 4) 동공 라벨(3)만 이진 마스크로
-        pupil_mask = np.zeros_like(predict_2d, dtype=np.uint8)
-        pupil_mask[predict_2d == 3] = 255
-
-        # 5) 컨투어에서 타원 피팅
-        contours, _ = cv2.findContours(
-            pupil_mask,
-            cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE,
-        )
-
-        if not contours:
-            result = {
-                "location": (0.0, 0.0),
-                "diameter": 0.0,
-                "confidence": 0.0,
-                "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
-            }
-        else:
-            best_contour = max(contours, key=cv2.contourArea)
-            if len(best_contour) < 5:
-                result = {
-                    "location": (0.0, 0.0),
-                    "diameter": 0.0,
-                    "confidence": 0.0,
-                    "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
-                }
-            else:
-                (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
-                result = {
-                    "location": (float(cx), float(cy)),
-                    "diameter": float(MA),
-                    "confidence": 1.0,
-                    "ellipse": {
-                        "axes": (float(MA), float(ma)),
-                        "angle": float(angle_deg),
-                        "center": (float(cx), float(cy)),
-                    },
-                }
-
-        norm_pos = normalize(result["location"], (frame.width, frame.height), flip_y=True)
-        datum = self.create_pupil_datum(
-            norm_pos=norm_pos,
-            diameter=result["diameter"],
-            confidence=result["confidence"],
-            timestamp=frame.timestamp,
-        )
-        datum["ellipse"] = {
-            "axes": result["ellipse"]["axes"],
-            "angle": result["ellipse"]["angle"],
-            "center": result["ellipse"]["center"],
-        }
-        # t_end = time.perf_counter()
-        # proc_latency = (t_end - t_start) * 1000
-        # e2e_latency = (time.time() - frame.timestamp) * 1000
-        # self.latency_log.append({
-        #     "method": "AD-GBC",
-        #     "timestamp": frame.timestamp,
-        #     "processing_latency_ms": proc_latency,
-        #     "e2e_latency_ms": e2e_latency,
-        #     "t_start": t_start,
-        #     "t_end": t_end,
-        # })
-        return datum
-
-    def detect_nnRITnet(self, frame, **kwargs):
-        if hasattr(frame, "gray"):
-            gray = frame.gray
-        elif isinstance(frame, np.ndarray):
-            if len(frame.shape) == 3:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            else:
-                gray = frame
-        else:
-            try:
-                img = self.convert_mjpeg_to_numpy(frame)
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            except Exception as e:
-                logger.error(f"Error converting MJPEGFrame: {e}")
-                return None
-
-        gray = gray.astype(np.uint8)
-        tensor = self.get_img(gray).unsqueeze(0).to(self.device)  # (1, 1, H, W)
-
-        with torch.no_grad():
-            output = self.model(tensor)
-
-        predict = get_predictions(output)  # (1, H, W)
-        predict_2d = predict[0].cpu().numpy()  # (H, W)
-
-        pupil_mask = np.zeros_like(predict_2d, dtype=np.uint8)
-        pupil_mask[predict_2d == 3] = 255
-
-        contours, _ = cv2.findContours(
-            pupil_mask,
-            cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE,
-        )
-
-        if not contours:
-            result = {
-                "location": (0.0, 0.0),
-                "diameter": 0.0,
-                "confidence": 0.0,
-                "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
-            }
-        else:
-            best_contour = max(contours, key=cv2.contourArea)
-            if len(best_contour) < 5:
-                result = {
-                    "location": (0.0, 0.0),
-                    "diameter": 0.0,
-                    "confidence": 0.0,
-                    "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
-                }
-            else:
-                (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
-                result = {
-                    "location": (float(cx), float(cy)),
-                    "diameter": float(MA),
-                    "confidence": 1.0,
-                    "ellipse": {
-                        "axes": (float(MA), float(ma)),
-                        "angle": float(angle_deg),
-                        "center": (float(cx), float(cy)),
-                    },
-                }
-
-        norm_pos = normalize(result["location"], (frame.width, frame.height), flip_y=True)
-        datum = self.create_pupil_datum(
-            norm_pos=norm_pos,
-            diameter=result["diameter"],
-            confidence=result["confidence"],
-            timestamp=frame.timestamp,
-        )
-        datum["ellipse"] = {
-            "axes": result["ellipse"]["axes"],
-            "angle": result["ellipse"]["angle"],
-            "center": result["ellipse"]["center"],
-        }
-
-        return datum
     #################################################################
 
     def unproject_single_observation(self, prediction, mask=None, threshold=0.5):

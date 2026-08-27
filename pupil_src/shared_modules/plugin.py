@@ -70,7 +70,7 @@ class Plugin:
         import types
         import time
 
-        methods_to_wrap = ["recent_events", "gl_display", "detect", "detect_RITnet", "detect_ADGBC"]
+        methods_to_wrap = ["recent_events", "gl_display", "detect_MODEL"]
 
         for method_name in methods_to_wrap:
             original_method = getattr(self, method_name, None)
