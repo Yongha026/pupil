@@ -321,21 +321,6 @@ class Detector2DPlugin(PupilDetectorPlugin):
         return datum
 
     def cleanup(self):
-        if self.latency_log:
-            import csv
-            log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
-            try:
-                with open(log_path, "w", newline="") as f:
-                    writer = csv.DictWriter(
-                        f,
-                        fieldnames=["plugin", "timestamp", "processing_latency_ms", "e2e_latency_ms", "t_start", "t_end"],
-                        extrasaction="ignore"
-                    )
-                    writer.writeheader()
-                    writer.writerows(self.latency_log)
-                logger.info(f"Saved Latency to {log_path}")
-            except Exception as e:
-                logger.error(f"Failed to save log during cleanup: {e}")
         super().cleanup()
 
 
@@ -350,49 +335,6 @@ class Detector2DPlugin(PupilDetectorPlugin):
             raise AttributeError(f"frame 객체에서 jpeg_buffer를 찾을 수 없습니다: {e}")
         except Exception as e:
             raise RuntimeError(f"MJPEG 데이터를 numpy로 변환하는 중 오류 발생: {e}")
-
-    # def detect_deepVOG(self, frame, **kwargs):
-    #     # Assuming frame is preprocessed and contains the deep learning output
-    #     # e.g., frame is the output of a deep learning model with shape (height, width, 3)
-    #     # Extract mask-confidence from frame
-    #
-    #     if not isinstance(frame, np.ndarray):  # frame이 NumPy 배열이 아닐 경우
-    #         try:
-    #             frame = self.convert_mjpeg_to_numpy(frame)
-    #         except ValueError as e:
-    #             print(f"Error converting MJPEGFrame: {e}")
-    #             return None
-    #     frame_resized = cv2.resize(frame, (320, 240))
-    #     model = deepvog.load_DeepVOG()
-    #     # Y_batch = model.predict(frame)
-    #     Y_batch = model.predict(np.expand_dims(frame_resized, axis=0))
-    #     pred_each = Y_batch[:, :, 1]  # mask-confidence
-    #
-    #     # Use eyefitter to fit an ellipse and obtain the result
-    #     result = self.unproject_single_observation(pred_each)
-    #
-    #     return result
-
-    # def detect_edgaze(self, frame, **kwargs):
-    #     if not isinstance(frame, np.ndarray):
-    #         try:
-    #             frame = self.convert_mjpeg_to_numpy(frame)
-    #         except ValueError as e:
-    #             print(f"Error converting MJPEGFrame: {e}")
-    #             return None
-    #
-    #     # Edgaze에서 기본적으로 400(H)×640(W)를 쓰고 싶다면:
-    #     # frame_resized = cv2.resize(frame, (640, 400))  # (width=640, height=400)
-    #
-    #     # 만약 EyeSegmentation이 ndarray 직접 입력을 받는 `predict_image`가 있다면:
-    #     Y_batch = self.model.predict_image(frame)
-    #
-    #     # Y_batch의 shape가 (400, 640, 채널수)처럼 나온다고 가정할 때,
-    #     # 예: 채널 1이 confidence map이라면:
-    #
-    #     # Y_batch_resized = cv2.resize(Y_batch, (192,192))
-    #     result = self.unproject_single_observation(Y_batch)
-    #     return result
 
     def get_img(self, img: np.ndarray) -> torch.Tensor:
         """

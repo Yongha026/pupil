@@ -31,12 +31,15 @@ latencies = np.array([])
 start_timestamps = np.array([])
 with open(args.CSVPATH, 'r', newline='') as f:
     reader = csv.DictReader(f)
-    for row in reader:
-        latencies = np.append(latencies, float(row['processing_latency_ms']))
-        starts = np.append(start_timestamps, float(row['t_start']))
-
+    for i, row in enumerate(reader):
+        if i >= 1:
+            latencies = np.append(latencies, float(row['processing_latency_ms']))
+            start_timestamps = np.append(start_timestamps, float(row['t_start']))
+latencies = latencies[:-1]
+start_timestamps = start_timestamps[:-1]
+# starts = starts[:-1]
 print(f"With total {len(latencies)} data: {np.mean(latencies):.4f} ± {np.std(latencies):.4f}")
-print(f"Average start timestamp: {np.mean(starts)}")
+print(f"Average start timestamp: {np.mean(start_timestamps)}")
 '''
 #################### 5 Runs in iulab9 ####################
 AD-GBC result with total 5 data: 422.7390 ± 2.9498
