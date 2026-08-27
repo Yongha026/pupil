@@ -38,6 +38,8 @@ from .visualizer_2d import draw_pupil_outline
 from pupil_detector_plugins import deepvog
 from pupil_detector_plugins import edgaze
 from pupil_detector_plugins import adgbc
+from pupil_detector_plugins import nn_ritnet
+from pupil_detector_plugins import nn_unext
 from draw_ellipse import fit_ellipse
 from CheckEllipse import computeEllipseConfidence
 import cv2
@@ -90,16 +92,18 @@ class Detector2DPlugin(PupilDetectorPlugin):
         기존 __init__에 model_path, device, preview 등을 인자로 추가.
         """
 
-
+        plugin_dir = os.path.dirname(__file__)
         model_name = "densenet"
-        model_path = "./best_model.pkl"
+        # model_path = "./best_model.pkl"
+        # adgbc, unext, ritnet ckpt는 gdown으로 넣어야함(깃허브 용량이슈)
+        model_path_ritnet = os.path.join(plugin_dir, "ritnet_nn_best.pth")
+        model_path_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
+        model_path_adgbc = os.path.join(plugin_dir,"adgbc_nn_best.pth")
         device_str = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device_str)
 
         #################### AD-GBC ####################
         # 3) AD-GBC 모델 load from .pth
-        plugin_dir = os.path.dirname(__file__)
-        model_path_adgbc = os.path.join(plugin_dir,"adgbc_nn_best.pth") # 따로 ckpt넣어야함(깃허브 용량이슈, .pth about 300mb)
         # ADGBC gdown
         # https://drive.google.com/file/d/1By1SsLnPVxvQ6CiJ5sBThfqcW-0o5OpN/view?usp=drive_link
 
@@ -135,7 +139,45 @@ class Detector2DPlugin(PupilDetectorPlugin):
         # self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         # self.model.eval()
 
-        ################################################
+
+        #################### nnRITnet ####################
+        # https://drive.google.com/file/d/1AvLUJj7e4Rfj61BNLzvDGl0pciJAfubq/view?usp=drive_link
+
+        # self.model = nn_ritnet.DenseNet2D(dropout=True, prob=0.2,enable_deep_supervision=False).to(self.device)
+        # if os.path.exists(model_path_ritnet):
+        #     try:
+        #         checkpoint = torch.load(model_path_ritnet, map_location=self.device, weights_only=False)
+        #         if isinstance(checkpoint, dict) and "network_weights" in checkpoint:
+        #             state_dict = checkpoint["network_weights"]
+        #         else:
+        #             state_dict = checkpoint
+        #         self.model.load_state_dict(state_dict)
+        #         self.model.eval()
+        #         logger.info("Loaded nnRITnet weights successfully")
+        #     except Exception as e:
+        #         logger.error(f"Failed to load nnRITnet: {e}")
+        # else:
+        #     logger.warning(f"nnRITnet ckpt file not found at {model_path_ritnet}")
+        #################### UNeXt ####################
+        # https://drive.google.com/file/d/1wRdTBIjoCzbOPh0EW_-bwBQEECGBEMRW/view?usp=drive_link
+
+        # self.model = nn_unext.UNext(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+        # if os.path.exists(model_path_unext):
+        #     try:
+        #         checkpoint = torch.load(model_path_unext, map_location=self.device, weights_only=False)
+        #         if isinstance(checkpoint, dict) and "network_weights" in checkpoint:
+        #             state_dict = checkpoint["network_weights"]
+        #         else:
+        #             state_dict = checkpoint
+        #         self.model.load_state_dict(state_dict)
+        #         self.model.eval()
+        #         logger.info("Loaded nn_unext weights successfully")
+        #     except Exception as e:
+        #         logger.error(f"Failed to load nn_unext: {e}")
+        # else:
+        #     logger.warning(f"nn_unext ckpt file not found at {model_path_unext}")
+
+        ################################################################################################
 
 
 
@@ -633,6 +675,84 @@ class Detector2DPlugin(PupilDetectorPlugin):
         #     "t_start": t_start,
         #     "t_end": t_end,
         # })
+        return datum
+
+    def detect_nnRITnet(self, frame, **kwargs):
+        if hasattr(frame, "gray"):
+            gray = frame.gray
+        elif isinstance(frame, np.ndarray):
+            if len(frame.shape) == 3:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = frame
+        else:
+            try:
+                img = self.convert_mjpeg_to_numpy(frame)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            except Exception as e:
+                logger.error(f"Error converting MJPEGFrame: {e}")
+                return None
+
+        gray = gray.astype(np.uint8)
+        tensor = self.get_img(gray).unsqueeze(0).to(self.device)  # (1, 1, H, W)
+
+        with torch.no_grad():
+            output = self.model(tensor)
+
+        predict = get_predictions(output)  # (1, H, W)
+        predict_2d = predict[0].cpu().numpy()  # (H, W)
+
+        pupil_mask = np.zeros_like(predict_2d, dtype=np.uint8)
+        pupil_mask[predict_2d == 3] = 255
+
+        contours, _ = cv2.findContours(
+            pupil_mask,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+
+        if not contours:
+            result = {
+                "location": (0.0, 0.0),
+                "diameter": 0.0,
+                "confidence": 0.0,
+                "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
+            }
+        else:
+            best_contour = max(contours, key=cv2.contourArea)
+            if len(best_contour) < 5:
+                result = {
+                    "location": (0.0, 0.0),
+                    "diameter": 0.0,
+                    "confidence": 0.0,
+                    "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
+                }
+            else:
+                (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
+                result = {
+                    "location": (float(cx), float(cy)),
+                    "diameter": float(MA),
+                    "confidence": 1.0,
+                    "ellipse": {
+                        "axes": (float(MA), float(ma)),
+                        "angle": float(angle_deg),
+                        "center": (float(cx), float(cy)),
+                    },
+                }
+
+        norm_pos = normalize(result["location"], (frame.width, frame.height), flip_y=True)
+        datum = self.create_pupil_datum(
+            norm_pos=norm_pos,
+            diameter=result["diameter"],
+            confidence=result["confidence"],
+            timestamp=frame.timestamp,
+        )
+        datum["ellipse"] = {
+            "axes": result["ellipse"]["axes"],
+            "angle": result["ellipse"]["angle"],
+            "center": result["ellipse"]["center"],
+        }
+
         return datum
     #################################################################
 
