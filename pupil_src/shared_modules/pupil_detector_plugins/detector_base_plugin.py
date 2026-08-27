@@ -119,31 +119,12 @@ class PupilDetectorPlugin(Plugin):
         # TODO: This is currently used by Pye3D to get the results of the 2D detection
         previous_detection_results = event.get(EVENT_KEY, [])
 
-        # detection_result = self.detect(
-        #     frame=frame,
-        #     # TODO: workaround to get 2D data into pye3D for now
-        #     previous_detection_results=previous_detection_results,
-        # )
-
-        # detection_result = self.detect_edgaze(
-        #
-        #     frame=frame,
-        #     # TODO: workaround to get 2D data into pye3D for now
-        #     previous_detection_results=previous_detection_results,
-        # )
-
-        ############# Hongik IULab #############################
-        detection_result = self.detect_MODEL(
-
+        detection_result = self.detect(
             frame=frame,
             # TODO: workaround to get 2D data into pye3D for now
             previous_detection_results=previous_detection_results,
         )
-        # detection_result = self.detect_ADGBC(
-        #         frame=frame,
-        #         previous_detection_results=previous_detection_results,
-        #     )
-        #########################################################
+
 
         # Append the new detection result to the previous results
         event[EVENT_KEY] = previous_detection_results + [detection_result]

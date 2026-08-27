@@ -123,19 +123,11 @@ def main():
     print(f"Visual results successfully commented out to: {args.save_path}")
     plt.close()
 
-    # Discard first & last inferecne time (Loading/unloading model)
-    plugin.detect_MODEL(frame)
+    # Discard first & last inferecne time (Loading model / Garbage collection)
     plugin.cleanup()
-    plugin.detect_MODEL(frame)
-    plugin.cleanup()
-    plugin.detect_MODEL(frame)
-    plugin.cleanup()
-    plugin.detect_MODEL(frame)
-    plugin.cleanup()
-    plugin.detect_MODEL(frame)
-    plugin.cleanup()
-    plugin.detect_MODEL(frame)
-    plugin.cleanup()
+    for i in range(100):
+        plugin.detect_MODEL(frame)
+        plugin.cleanup()
 
 if __name__ == '__main__':
     main()
