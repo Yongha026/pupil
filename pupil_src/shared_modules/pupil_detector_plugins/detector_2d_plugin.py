@@ -206,7 +206,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         import csv
         log_path = os.path.join(os.path.dirname(__file__), "latency_log.csv")
         try:
-            with open(log_path, "w", newline="") as f:
+            with open(log_path, "a", newline="") as f:
                 writer = csv.DictWriter(f,fieldnames=["method","timestamp","processing_latency_ms","e2e_latency_ms","t_start","t_end"])
                 # writer = csv.DictWriter(f,fieldnames=["timestamp","processing_latency_ms"])
                 writer.writeheader()
@@ -506,17 +506,17 @@ class Detector2DPlugin(PupilDetectorPlugin):
         datum["ellipse"]["angle"] = result["ellipse"]["angle"]
         datum["ellipse"]["center"] = result["ellipse"]["center"]
 
-        t_end = time.perf_counter()
-        proc_latency = (t_end - t_start) * 1000
-        e2e_latency = (time.time() - frame.timestamp) * 1000
-        self.latency_log.append({
-            "method": "RITnet",
-            "timestamp": frame.timestamp,
-            "processing_latency_ms": proc_latency,
-            "e2e_latency_ms": e2e_latency,
-            "t_start": t_start,
-            "t_end": t_end,
-        })
+        # t_end = time.perf_counter()
+        # proc_latency = (t_end - t_start) * 1000
+        # e2e_latency = (time.time() - frame.timestamp) * 1000
+        # self.latency_log.append({
+        #     "method": "RITnet",
+        #     "timestamp": frame.timestamp,
+        #     "processing_latency_ms": proc_latency,
+        #     "e2e_latency_ms": e2e_latency,
+        #     "t_start": t_start,
+        #     "t_end": t_end,
+        # })
 
         return datum
 
@@ -621,17 +621,17 @@ class Detector2DPlugin(PupilDetectorPlugin):
             "angle": result["ellipse"]["angle"],
             "center": result["ellipse"]["center"],
         }
-        t_end = time.perf_counter()
-        proc_latency = (t_end - t_start) * 1000
-        e2e_latency = (time.time() - frame.timestamp) * 1000
-        self.latency_log.append({
-            "method": "AD-GBC",
-            "timestamp": frame.timestamp,
-            "processing_latency_ms": proc_latency,
-            "e2e_latency_ms": e2e_latency,
-            "t_start": t_start,
-            "t_end": t_end,
-        })
+        # t_end = time.perf_counter()
+        # proc_latency = (t_end - t_start) * 1000
+        # e2e_latency = (time.time() - frame.timestamp) * 1000
+        # self.latency_log.append({
+        #     "method": "AD-GBC",
+        #     "timestamp": frame.timestamp,
+        #     "processing_latency_ms": proc_latency,
+        #     "e2e_latency_ms": e2e_latency,
+        #     "t_start": t_start,
+        #     "t_end": t_end,
+        # })
         return datum
     #################################################################
 

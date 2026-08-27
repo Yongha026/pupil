@@ -59,9 +59,89 @@ class Plugin:
 
     def __init__(self, g_pool):
         self.g_pool = g_pool
+        self.latency_log = []
 
         if getattr(g_pool, "debug", False):
             self.__monkeypatch_gl_display_error_checking()
+
+        self._wrap_methods_for_latency()
+
+    def _wrap_methods_for_latency(self):
+        import types
+        import time
+
+        methods_to_wrap = ["recent_events", "gl_display", "detect", "detect_RITnet", "detect_ADGBC"]
+
+        for method_name in methods_to_wrap:
+            original_method = getattr(self, method_name, None)
+            if original_method is None:
+                continue
+
+            base_method = getattr(Plugin, method_name, None)
+            if base_method is not None and original_method.__func__ is base_method:
+                continue
+
+            # Check if already wrapped
+            if getattr(original_method, "__wrapped_for_latency__", False) or getattr(original_method.__func__, "__wrapped_for_latency__", False):
+                continue
+
+            def make_wrapper(orig_method, name):
+                def wrapper(inst, *args, **kwargs):
+                    t_start = time.perf_counter()
+                    res = orig_method(inst, *args, **kwargs)
+                    t_end = time.perf_counter()
+                    proc_latency = (t_end - t_start) * 1000
+
+                    # Resolve the frame/event timestamp
+                    timestamp = None
+                    if args:
+                        first_arg = args[0]
+                        if hasattr(first_arg, "timestamp"):
+                            timestamp = first_arg.timestamp
+                        elif isinstance(first_arg, dict) and "frame" in first_arg:
+                            frame = first_arg["frame"]
+                            if hasattr(frame, "timestamp"):
+                                timestamp = frame.timestamp
+                        elif isinstance(first_arg, dict) and "timestamp" in first_arg:
+                            timestamp = first_arg["timestamp"]
+                        elif isinstance(first_arg, list) and len(first_arg) > 0:
+                            if hasattr(first_arg[0], "timestamp"):
+                                timestamp = first_arg[0].timestamp
+                            elif isinstance(first_arg[0], dict) and "timestamp" in first_arg[0]:
+                                timestamp = first_arg[0]["timestamp"]
+
+                    if timestamp is None:
+                        try:
+                            timestamp = inst.g_pool.get_timestamp()
+                        except Exception:
+                            timestamp = time.time()
+
+                    e2e_latency = (time.time() - timestamp) * 1000 if timestamp else 0.0
+
+                    method_label = inst.class_name
+                    if name == "detect_RITnet":
+                        method_label = "RITnet"
+                    elif name == "detect_ADGBC":
+                        method_label = "AD-GBC"
+                    elif name == "detect":
+                        method_label = f"{inst.class_name}.detect"
+
+                    inst.latency_log.append({
+                        "method": method_label,
+                        "timestamp": timestamp,
+                        "processing_latency_ms": proc_latency,
+                        "e2e_latency_ms": e2e_latency,
+                        "t_start": t_start,
+                        "t_end": t_end,
+                    })
+                    return res
+                return wrapper
+
+            unbound_func = original_method.__func__
+            wrapped_func = make_wrapper(unbound_func, method_name)
+            wrapped_func.__wrapped_for_latency__ = True
+            wrapper_method = types.MethodType(wrapped_func, self)
+            setattr(self, method_name, wrapper_method)
 
     def init_ui(self):
         """
@@ -174,7 +254,32 @@ class Plugin:
         This happens either voluntarily or forced.
         if you have an gui or glfw window destroy it here.
         """
-        pass
+        if getattr(self, "latency_log", None):
+            import csv
+            log_path = os.path.join(os.path.dirname(__file__), "..", "..", "latency_logs.csv")
+            if not os.path.isdir(os.path.dirname(log_path)):
+                log_path = "latency_logs.csv"
+            try:
+                file_exists = os.path.exists(log_path)
+                with open(log_path, "a", newline="") as f:
+                    writer = csv.DictWriter(
+                        f,
+                        fieldnames=[
+                            "method",
+                            "timestamp",
+                            "processing_latency_ms",
+                            "e2e_latency_ms",
+                            "t_start",
+                            "t_end",
+                        ],
+                    )
+                    if not file_exists:
+                        writer.writeheader()
+                    writer.writerows(self.latency_log)
+                logger.info(f"Saved {len(self.latency_log)} latency entries to {log_path}")
+                self.latency_log.clear()
+            except Exception as e:
+                logger.error(f"Failed to save latency log: {e}")
 
     # ------- do not change methods, properties below this line in your derived class
 
@@ -490,6 +595,37 @@ class Plugin_List:
                 ):
                     p.deinit_ui()
                 p.cleanup()
+                # Fallback log saving to root in case super().cleanup() was not called
+                if getattr(p, "latency_log", None):
+                    import csv
+                    log_path = os.path.join(os.path.dirname(__file__), "..", "..", "latency_logs.csv")
+                    if not os.path.isdir(os.path.dirname(log_path)):
+                        log_path = "latency_logs.csv"
+                    try:
+                        file_exists = os.path.exists(log_path)
+                        with open(log_path, "a", newline="") as f:
+                            writer = csv.DictWriter(
+                                f,
+                                fieldnames=[
+                                    "method",
+                                    "timestamp",
+                                    "processing_latency_ms",
+                                    "e2e_latency_ms",
+                                    "t_start",
+                                    "t_end",
+                                ],
+                            )
+                            if not file_exists:
+                                writer.writeheader()
+                            writer.writerows(p.latency_log)
+                        logger.info(f"Saved {len(p.latency_log)} latency entries to {log_path} (fallback)")
+                        p.latency_log.clear()
+                    except Exception as e:
+                        logger.error(f"Failed to save fallback latency log: {e}")
+
+                logger.info(
+                    f"Plugin {p.class_name} cleaned up at timestamp: {self.g_pool.get_timestamp()}"
+                )
                 logger.debug(f"Unloaded Plugin: {p}")
                 self._plugins.remove(p)
 
