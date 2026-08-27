@@ -27,3 +27,13 @@ print(f"AD-GBC result with total {len(adgbc_process)} data: {np.mean(adgbc_proce
 print(f"AD-GBC result average start timestamp: {np.mean(adgbc_start_timestamp)}\n")
 print(f"RITnet result with total {len(ritnet_process)} data: {np.mean(ritnet_process):.4f} ± {np.std(ritnet_process):.4f}")
 print(f"RITnet result average start timestamp: {np.mean(ritnet_start_timestamp)}")
+
+
+'''
+#################### 5 Runs in iulab9 ####################
+AD-GBC result with total 5 data: 422.7390 ± 2.9498
+AD-GBC result average start timestamp: 2148055.580273004
+
+RITnet result with total 5 data: 98.6721 ± 2.0833
+RITnet result average start timestamp: 2148056.003025872
+'''
