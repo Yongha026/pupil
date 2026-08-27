@@ -8,6 +8,8 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+DETECT_MODEL = "2dcpp" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet
+
 import logging
 import numpy as np
 import os
@@ -59,9 +61,6 @@ CLIP_LIMIT = 1.5
 TILE_GRID_SIZE = 8
 EYE_CLASS = 1
 logger = logging.getLogger(__name__)
-
-DETECT_MODEL = "adgbc" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet
-
 
 class Detector2DPlugin(PupilDetectorPlugin):
     pupil_detection_identifier = "2d"

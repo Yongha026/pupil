@@ -51,17 +51,17 @@ RITnet result average start timestamp: 2148056.003025872
 
 #################### Loading from scratches #################
 # adgbc
-# With total 5 data: 424.3565 ± 4.2081
-# Average start timestamp: 2162175.037529166
+# With total 99 data: 102.7918 ± 22.2038
+# Average start timestamp: 2167746.3643981838
 # ritnet
-# With total 5 data: 262.6212 ± 1.0687
-# Average start timestamp: 2162604.934871826
+# With total 99 data: 5.5401 ± 0.1775
+# Average start timestamp: 2167949.2887510182
 # nn_ritnet
-# With total 5 data: 266.0399 ± 4.0076
-# Average start timestamp: 2162708.760992854
+# With total 99 data: 5.4053 ± 0.2919
+# Average start timestamp: 2167908.442596336
 # nn_unext
-# With total 5 data: 296.2269 ± 2.2723
-# Average start timestamp: 2162828.324118328
+# With total 99 data: 6.4965 ± 0.4118
+# Average start timestamp: 2167986.227508659
 # 2dcpp
 # With total 5 data: 0.1381 ± 0.0033
 # Average start timestamp: 2162952.186956297

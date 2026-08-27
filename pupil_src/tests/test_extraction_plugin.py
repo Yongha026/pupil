@@ -108,6 +108,14 @@ def main():
         # Draw the blue center point
         cv2.circle(img_result, (int(cx), int(cy)), 3, (255, 0, 0), -1)
 
+
+    # Discard first & last inferecne time (Loading model / Garbage collection)
+    plugin.cleanup()
+    for i in range(100):
+        plugin.detect_MODEL(frame)
+        plugin.cleanup()
+
+
     # Save visualization
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     axes[0].imshow(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
@@ -122,12 +130,6 @@ def main():
     # plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
     print(f"Visual results successfully commented out to: {args.save_path}")
     plt.close()
-
-    # Discard first & last inferecne time (Loading model / Garbage collection)
-    plugin.cleanup()
-    for i in range(100):
-        plugin.detect_MODEL(frame)
-        plugin.cleanup()
 
 if __name__ == '__main__':
     main()
