@@ -60,7 +60,7 @@ TILE_GRID_SIZE = 8
 EYE_CLASS = 1
 logger = logging.getLogger(__name__)
 
-DETECT_MODEL = "adgbc" # adgbc, nn_ritnet, nn_unext, 2dcpp
+DETECT_MODEL = "adgbc" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet
 
 
 class Detector2DPlugin(PupilDetectorPlugin):

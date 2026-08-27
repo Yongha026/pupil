@@ -26,8 +26,7 @@ player_settings/
 settings/
 *.db
 *.npy
-*.png
-!test_pupil_result.png
+
 *.log
 
 
@@ -67,3 +66,4 @@ A
 # AD-GBC ckpts
 pupil_src/shared_modules/pupil_detector_plugins/adgbc_nn_best.pth
 *.pth
+!./model_result_images
