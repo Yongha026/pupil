@@ -37,3 +37,7 @@ torch==2.5.1
 torchvision==0.20.1
 timm==1.0.22
 matplotlib==3.10.7
+
+# MambaLiteUNet - might need --no-build-isolation
+causal_conv1d==1.5.0.post8
+mamba-ssm==2.2.4

@@ -61,3 +61,6 @@ print(f"Average start timestamp: {np.mean(start_timestamps)}")
 # mambaliteunet
 # With total 99 data: 50.3218 ± 1.1478
 # Average start timestamp: 2231818.8394683036
+# rollingunet
+# With total 99 data: 97.6275 ± 20.2625
+# Average start timestamp: 2234496.729014041

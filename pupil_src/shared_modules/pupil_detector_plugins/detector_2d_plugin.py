@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-DETECT_MODEL = "rollingunet" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet, mambaliteunet, rollingunet
+DETECT_MODEL = "mambaliteunet" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet, mambaliteunet, rollingunet
 
 import logging
 import numpy as np
@@ -43,6 +43,7 @@ from pupil_detector_plugins import adgbc
 from pupil_detector_plugins import nn_ritnet
 from pupil_detector_plugins import nn_unext
 from pupil_detector_plugins import mambaliteunet
+from pupil_detector_plugins import rollingunet
 from draw_ellipse import fit_ellipse
 from CheckEllipse import computeEllipseConfidence
 import cv2
