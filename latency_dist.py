@@ -58,3 +58,6 @@ print(f"Average start timestamp: {np.mean(start_timestamps)}")
 # 2dcpp
 # With total 99 data: 1.4109 ± 0.0637
 # Average start timestamp: 2168494.829089349
+# mambaliteunet
+# With total 99 data: 50.3218 ± 1.1478
+# Average start timestamp: 2231818.8394683036

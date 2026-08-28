@@ -3,6 +3,7 @@ cd ./pupil_src/shared_modules/pupil_detector_plugins
 ADGBC="adgbc_nn_best.pth"
 RITNET="ritnet_nn_best.pth"
 UNEXT="unext_nn_best.pth"
+MLU="mambaliteunet_nn_best.pth"
 
 # 1. AD-GBC
 if [ -f "$ADGBC" ]; then
@@ -26,6 +27,14 @@ if [ -f "$UNEXT" ]; then
 else
   gdown 1wRdTBIjoCzbOPh0EW_-bwBQEECGBEMRW
   echo "Downloaded ckpt for UNeXt"
+fi
+
+# 3. MambaLiteUNet
+if [ -f "$MLU" ]; then
+  echo "Already have ckpt for MambaLiteUNet"
+else
+  gdown 1qunzvgNxDB06vWZl_3hRcydVb29W37jU
+  echo "Downloaded ckpt for MambaLiteUNet"
 fi
 
 cd ../../../

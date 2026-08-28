@@ -1,4 +1,5 @@
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 import sys
 import argparse
 import cv2
@@ -62,7 +63,7 @@ class MockFrame:
 def parse_args():
     parser = argparse.ArgumentParser(description="Test Detector2DPlugin pupil extraction offline using plugin functions")
     parser.add_argument('--img_path', default="pupil.jpg", required=True, help="Path to input eye image")
-    parser.add_argument('--save_path', default="plugin_test_result.png", help="Path to save visual results")
+    parser.add_argument('--save_path', default="_", help="Path to save visual results")
     return parser.parse_args()
 
 def main():
@@ -81,6 +82,7 @@ def main():
     # 5. Instantiate the Plugin
     print("Instantiating Detector2DPlugin...")
     plugin = Detector2DPlugin(g_pool=g_pool)
+    print(f"Selected pupil detection model: {plugin.active_model}")
 
     # 6. Perform detection using the plugin's unified detect function
     print("Running detection using plugin.detect...")
@@ -127,8 +129,10 @@ def main():
     axes[1].axis('off')
 
     plt.tight_layout()
-    plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
-    print(f"Visual results successfully commented out to: {args.save_path}")
+    if args.save_path.endswith((".png",".jpg")):
+        plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
+        print(f"Visual results successfully commented out to: {args.save_path}")
+    else: print("Result not saved. Set --save_path to save result image.")
     plt.close()
 
 if __name__ == '__main__':

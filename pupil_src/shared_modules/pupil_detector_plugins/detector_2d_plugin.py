@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-DETECT_MODEL = "adgbc" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet
+DETECT_MODEL = "rollingunet" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet, mambaliteunet, rollingunet
 
 import logging
 import numpy as np
@@ -42,6 +42,7 @@ from pupil_detector_plugins import edgaze
 from pupil_detector_plugins import adgbc
 from pupil_detector_plugins import nn_ritnet
 from pupil_detector_plugins import nn_unext
+from pupil_detector_plugins import mambaliteunet
 from draw_ellipse import fit_ellipse
 from CheckEllipse import computeEllipseConfidence
 import cv2
@@ -98,10 +99,13 @@ class Detector2DPlugin(PupilDetectorPlugin):
         self.device = torch.device(device_str)
         self.models = {}
 
+
         model_path_adgbc = os.path.join(plugin_dir, "adgbc_nn_best.pth")
         model_path_ritnet_orig = os.path.join(plugin_dir, "best_model.pkl")
         model_path_nn_ritnet = os.path.join(plugin_dir, "ritnet_nn_best.pth")
         model_path_nn_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
+        model_path_mambaliteunet = os.path.join(plugin_dir, "mambaliteunet_nn_best.pth")
+        model_path_rollingunet = os.path.join(plugin_dir, "rollingunet_nn_best.pth")
 
         # Load only the specified DETECT_MODEL to save memory and startup time
         if DETECT_MODEL == "adgbc":
@@ -165,6 +169,38 @@ class Detector2DPlugin(PupilDetectorPlugin):
                     logger.warning(f"UNeXt ckpt file not found at {model_path_nn_unext}")
             except Exception as e:
                 logger.error(f"Failed to load UNeXt: {e}")
+        elif DETECT_MODEL == "mambaliteunet":
+            # 4) MambaLiteUNet Model
+            try:
+                model = mambaliteunet.MambaLiteUNet(num_classes=4, input_channels=1).to(self.device)
+                if os.path.exists(model_path_nn_unext):
+                    checkpoint = torch.load(model_path_mambaliteunet, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["mambaliteunet"] = model
+                    logger.info("Loaded MambaLiteUNet weights successfully")
+                else:
+                    logger.warning(f"MambaLiteUNet ckpt file not found at {model_path_mambaliteunet}")
+            except Exception as e:
+                logger.error(f"Failed to load MambaLiteUNet: {e}")
+
+        elif DETECT_MODEL == "rollingunet":
+            # 4) MambaLiteUNet Model
+            try:
+                model = rollingunet.Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+                if os.path.exists(model_path_nn_unext):
+                    checkpoint = torch.load(model_path_rollingunet, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (
+                                isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["rollingunet"] = model
+                    logger.info("Loaded RollingUNet_L weights successfully")
+                else:
+                    logger.warning(f"RollingUNet_L ckpt file not found at {model_path_rollingunet}")
+            except Exception as e:
+                logger.error(f"Failed to load RollingUNet_L: {e}")
 
         self.active_model = DETECT_MODEL
 
