@@ -127,7 +127,7 @@ def main():
     axes[1].axis('off')
 
     plt.tight_layout()
-    # plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
+    plt.savefig(args.save_path, bbox_inches='tight', dpi=150)
     print(f"Visual results successfully commented out to: {args.save_path}")
     plt.close()
 

@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-DETECT_MODEL = "2dcpp" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet
+DETECT_MODEL = "adgbc" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet
 
 import logging
 import numpy as np

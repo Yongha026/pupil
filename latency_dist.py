@@ -40,16 +40,9 @@ start_timestamps = start_timestamps[:-1]
 # starts = starts[:-1]
 print(f"With total {len(latencies)} data: {np.mean(latencies):.4f} ± {np.std(latencies):.4f}")
 print(f"Average start timestamp: {np.mean(start_timestamps)}")
-'''
-#################### 5 Runs in iulab9 ####################
-AD-GBC result with total 5 data: 422.7390 ± 2.9498
-AD-GBC result average start timestamp: 2148055.580273004
 
-RITnet result with total 5 data: 98.6721 ± 2.0833
-RITnet result average start timestamp: 2148056.003025872
-'''
 
-#################### Loading from scratches #################
+#################### 100 loops in iulab9 #################
 # adgbc
 # With total 99 data: 102.7918 ± 22.2038
 # Average start timestamp: 2167746.3643981838
@@ -63,5 +56,5 @@ RITnet result average start timestamp: 2148056.003025872
 # With total 99 data: 6.4965 ± 0.4118
 # Average start timestamp: 2167986.227508659
 # 2dcpp
-# With total 5 data: 0.1381 ± 0.0033
-# Average start timestamp: 2162952.186956297
+# With total 99 data: 1.4109 ± 0.0637
+# Average start timestamp: 2168494.829089349
