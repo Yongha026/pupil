@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-DETECT_MODEL = "mambaliteunet" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet, mambaliteunet, rollingunet
+DETECT_MODEL = "ulvmunet" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet, mambaliteunet, rollingunet, ulvmunet
 
 import logging
 import numpy as np
@@ -37,13 +37,7 @@ from plugin import Plugin
 from . import color_scheme
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_pupil_outline
-from pupil_detector_plugins import deepvog
-from pupil_detector_plugins import edgaze
-from pupil_detector_plugins import adgbc
-from pupil_detector_plugins import nn_ritnet
-from pupil_detector_plugins import nn_unext
-from pupil_detector_plugins import mambaliteunet
-from pupil_detector_plugins import rollingunet
+from pupil_detector_plugins import adgbc, nn_ritnet, nn_unext, mambaliteunet, rollingunet, ulvmunet
 from draw_ellipse import fit_ellipse
 from CheckEllipse import computeEllipseConfidence
 import cv2
@@ -107,6 +101,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         model_path_nn_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
         model_path_mambaliteunet = os.path.join(plugin_dir, "mambaliteunet_nn_best.pth")
         model_path_rollingunet = os.path.join(plugin_dir, "rollingunet_nn_best.pth")
+        model_path_ulvmunet = os.path.join(plugin_dir, "ulvm_nn_best.pth")
 
         # Load only the specified DETECT_MODEL to save memory and startup time
         if DETECT_MODEL == "adgbc":
@@ -171,7 +166,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
             except Exception as e:
                 logger.error(f"Failed to load UNeXt: {e}")
         elif DETECT_MODEL == "mambaliteunet":
-            # 4) MambaLiteUNet Model
+            # 5) MambaLiteUNet Model
             try:
                 model = mambaliteunet.MambaLiteUNet(num_classes=4, input_channels=1).to(self.device)
                 if os.path.exists(model_path_nn_unext):
@@ -187,7 +182,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 logger.error(f"Failed to load MambaLiteUNet: {e}")
 
         elif DETECT_MODEL == "rollingunet":
-            # 4) MambaLiteUNet Model
+            # 6) Rolling_Unet_L Model
             try:
                 model = rollingunet.Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
                 if os.path.exists(model_path_nn_unext):
@@ -202,6 +197,22 @@ class Detector2DPlugin(PupilDetectorPlugin):
                     logger.warning(f"RollingUNet_L ckpt file not found at {model_path_rollingunet}")
             except Exception as e:
                 logger.error(f"Failed to load RollingUNet_L: {e}")
+
+        elif DETECT_MODEL == "ulvmunet":
+            # 7) UltraLight_VM_UNet Model
+            try:
+                model = ulvmunet.UltraLight_VM_UNet(num_classes=4, input_channels=1).to(self.device)
+                if os.path.exists(model_path_nn_unext):
+                    checkpoint = torch.load(model_path_ulvmunet, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["ulvmunet"] = model
+                    logger.info("Loaded ULVMUNet weights successfully")
+                else:
+                    logger.warning(f"ULVMUNet ckpt file not found at {model_path_ulvmunet}")
+            except Exception as e:
+                logger.error(f"Failed to load ULVMUNet: {e}")
 
         self.active_model = DETECT_MODEL
 

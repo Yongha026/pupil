@@ -64,3 +64,6 @@ print(f"Average start timestamp: {np.mean(start_timestamps)}")
 # rollingunet
 # With total 99 data: 97.6275 ± 20.2625
 # Average start timestamp: 2234496.729014041
+# UltraLight_VMUNet
+# With total 99 data: 17.9419 ± 0.5686
+# Average start timestamp: 2255016.0028650993
