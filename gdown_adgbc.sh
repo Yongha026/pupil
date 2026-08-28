@@ -1,9 +1,11 @@
-cd ./pupil_src/shared_modules/pupil_detector_plugins
+cd ./pupil_src/shared_modules/pupil_detector_plugins/model_ckpts
 
 ADGBC="adgbc_nn_best.pth"
 RITNET="ritnet_nn_best.pth"
 UNEXT="unext_nn_best.pth"
 MLU="mambaliteunet_nn_best.pth"
+RUL="rollingunet_nn_best.pth"
+ULVM="ulvm_nn_best.pth"
 
 # 1. AD-GBC
 if [ -f "$ADGBC" ]; then
@@ -29,7 +31,7 @@ else
   echo "Downloaded ckpt for UNeXt"
 fi
 
-# 3. MambaLiteUNet
+# 4. MambaLiteUNet
 if [ -f "$MLU" ]; then
   echo "Already have ckpt for MambaLiteUNet"
 else
@@ -37,4 +39,19 @@ else
   echo "Downloaded ckpt for MambaLiteUNet"
 fi
 
-cd ../../../
+# 5. RollingUNet
+if [ -f "$RUL" ]; then
+  echo "Already have ckpt for RollingUNet"
+else
+  gdown 1ToMEQg9SFRAPqP3XfxeORVKflrOEnRGV
+  echo "Downloaded ckpt for RollingUNet"
+fi
+# 6. UltraLight_VMUNet
+if [ -f "$ULVM" ]; then
+  echo "Already have ckpt for UltraLight_VMUNet"
+else
+  gdown 1djqaLKjhOvqfDVHsYd_5m-9bsX3NFV46
+  echo "Downloaded ckpt for UltraLight_VMUNet"
+fi
+
+cd ../../../../

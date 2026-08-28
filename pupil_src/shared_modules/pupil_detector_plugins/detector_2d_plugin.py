@@ -89,7 +89,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         기존 __init__에 model_path, device, preview 등을 인자로 추가.
         """
 
-        plugin_dir = os.path.dirname(__file__)
+        plugin_dir = os.path.join(os.path.dirname(__file__),"model_ckpts")
         device_str = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device_str)
         self.models = {}
