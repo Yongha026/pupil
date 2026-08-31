@@ -139,7 +139,7 @@ elif args.DETECT_MODEL == "ulvmunet":
         raise e
 
 macs, params = get_model_complexity_info(
-    model, (1, 224, 224), as_strings=True, print_per_layer_stat=True
+    model, (1, 192,192), as_strings=True, print_per_layer_stat=True
 )
-print(f"{macs}, {params}")
+print(f"{macs},{params}")
 
