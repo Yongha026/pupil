@@ -3,13 +3,12 @@ import torchvision.models as models
 from ptflops import get_model_complexity_info
 import os
 import argparse
-
-import adgbc, mambaliteunet, rollingunet, ulvmunet, nn_ritnet, nn_unext
+from ..shared_modules.pupil_detector_plugins import nn_ritnet, nn_unext, mambaliteunet, rollingunet, ulvmunet
 parser=  argparse.ArgumentParser()
 parser.add_argument("DETECT_MODEL", type=str, help="adgbc | nn_ritnet | nn_unext | mambaliteunet | rollingunet | ulvmunet")
 args = parser.parse_args()
 
-plugin_dir = "./model_ckpts"
+plugin_dir = "../shared_modules/pupil_detector_plugins"
 device_str = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_str)
 
