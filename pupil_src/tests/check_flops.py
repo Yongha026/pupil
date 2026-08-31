@@ -12,13 +12,12 @@ sys.modules['pyglui'] = MagicMock()
 sys.modules['pyglui.cygl.utils'] = MagicMock()
 sys.modules['glfw'] = MagicMock()
 
-# Add pupil_src/shared_modules to sys.path to resolve imports correctly when run directly
+# Add the specific pupil_detector_plugins directory to sys.path
 tests_dir = os.path.dirname(os.path.abspath(__file__))
-shared_modules_dir = os.path.abspath(os.path.join(tests_dir, "..", "shared_modules"))
-if shared_modules_dir not in sys.path:
-    sys.path.append(shared_modules_dir)
+plugins_dir = os.path.abspath(os.path.join(tests_dir, "..", "shared_modules", "pupil_detector_plugins"))
+if plugins_dir not in sys.path:
+    sys.path.append(plugins_dir)
 
-from pupil_detector_plugins import adgbc, nn_ritnet, nn_unext, mambaliteunet, rollingunet, ulvmunet
 parser=  argparse.ArgumentParser()
 parser.add_argument("DETECT_MODEL", type=str, help="adgbc | nn_ritnet | nn_unext | mambaliteunet | rollingunet | ulvmunet")
 args = parser.parse_args()
@@ -40,6 +39,7 @@ model_path_ulvmunet = os.path.join(plugin_dir, "ulvm_nn_best.pth")
 # Load only the specified DETECT_MODEL to save memory and startup time
 if args.DETECT_MODEL == "adgbc":
     # 1) AD-GBC Model
+    import adgbc
     try:
         model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(device)
         if os.path.exists(model_path_adgbc):
@@ -55,6 +55,7 @@ if args.DETECT_MODEL == "adgbc":
 
 elif args.DETECT_MODEL == "nn_ritnet":
     # 3) nnRITnet Model
+    import nn_ritnet
     try:
         model = nn_ritnet.DenseNet2D(in_channels=1, out_channels=4, dropout=True, prob=0.2, deep_supervision=False).to(device)
         if os.path.exists(model_path_nn_ritnet):
@@ -70,6 +71,7 @@ elif args.DETECT_MODEL == "nn_ritnet":
 
 elif args.DETECT_MODEL == "nn_unext":
     # 4) UNeXt Model
+    import nn_unext
     try:
         model = nn_unext.UNext(num_classes=4, input_channels=1, deep_supervision=False).to(device)
         if os.path.exists(model_path_nn_unext):
@@ -85,6 +87,7 @@ elif args.DETECT_MODEL == "nn_unext":
 
 elif args.DETECT_MODEL == "mambaliteunet":
     # 5) MambaLiteUNet Model
+    import mambaliteunet
     try:
         model = mambaliteunet.MambaLiteUNet(num_classes=4, input_channels=1).to(device)
         if os.path.exists(model_path_mambaliteunet):
@@ -100,6 +103,11 @@ elif args.DETECT_MODEL == "mambaliteunet":
 
 elif args.DETECT_MODEL == "rollingunet":
     # 6) Rolling_Unet_L Model
+    class RollingUnetDummy:
+        pass
+    rollingunet = RollingUnetDummy()
+    from adgbc.archs_GBC import Rolling_Unet_L
+    rollingunet.Rolling_Unet_L = Rolling_Unet_L
     try:
         model = rollingunet.Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(device)
         if os.path.exists(model_path_rollingunet):
@@ -116,6 +124,7 @@ elif args.DETECT_MODEL == "rollingunet":
 
 elif args.DETECT_MODEL == "ulvmunet":
     # 7) UltraLight_VM_UNet Model
+    import ulvmunet
     try:
         model = ulvmunet.UltraLight_VM_UNet(num_classes=4, input_channels=1).to(device)
         if os.path.exists(model_path_ulvmunet):
