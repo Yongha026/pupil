@@ -19,7 +19,7 @@ if plugins_dir not in sys.path:
     sys.path.append(plugins_dir)
 
 parser=  argparse.ArgumentParser()
-parser.add_argument("DETECT_MODEL", type=str, help="adgbc | nn_ritnet | nn_unext | mambaliteunet | rollingunet | ulvmunet")
+parser.add_argument("DETECT_MODEL", type=str, help="adgbc | nn_ritnet | nn_unext | mambaliteunet | rollingunet | ulvmunet | ukan")
 args = parser.parse_args()
 
 plugin_dir = "../shared_modules/pupil_detector_plugins"
@@ -35,7 +35,7 @@ model_path_nn_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
 model_path_mambaliteunet = os.path.join(plugin_dir, "mambaliteunet_nn_best.pth")
 model_path_rollingunet = os.path.join(plugin_dir, "rollingunet_nn_best.pth")
 model_path_ulvmunet = os.path.join(plugin_dir, "ulvm_nn_best.pth")
-
+model_path_ukan = os.path.join(plugin_dir, "ukan_nn_best.pth")
 # Load only the specified DETECT_MODEL to save memory and startup time
 if args.DETECT_MODEL == "adgbc":
     # 1) AD-GBC Model
@@ -138,6 +138,22 @@ elif args.DETECT_MODEL == "ulvmunet":
         print(f"Error loading ulvmunet: {e}")
         raise e
 
+if args.DETECT_MODEL == "ukan":
+    # 1) UKAN model
+    import ukan
+    try:
+        model = ukan.UKAN(num_classes=4, input_channels=1, deep_supervision=False).to(device)
+        if os.path.exists(model_path_ukan):
+            checkpoint = torch.load(model_path_ukan, map_location=device, weights_only=False)
+            state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+            model.load_state_dict(state_dict)
+            model.eval()
+        else:
+            print(f"UKAN ckpt file not found at {model_path_ukan}")
+    except Exception as e:
+        print(f"Error loading adgbc: {e}")
+        raise e
+
 macs, params = get_model_complexity_info(
     model, (1, 192,192), as_strings=True, print_per_layer_stat=True
 )
@@ -150,3 +166,4 @@ print(f"{macs},{params}")
 # mambaliteunet 376.52 MMac, ~752  MFLOPs, 910.39k
 # RollingUNet_L 18.49  GMac, ~36.9 GFLOPs, 28.32 M
 # ulvmunet      31.68  MMac, ~63.4 MFLOPs, 49.34 k
+# ukan          3.87   GMac, ~7.74 GFLOPs, 25.36 M
