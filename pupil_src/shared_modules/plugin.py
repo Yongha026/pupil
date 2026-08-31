@@ -119,12 +119,6 @@ class Plugin:
                     e2e_latency = (time.time() - timestamp) * 1000 if timestamp else 0.0
 
                     method_label = inst.class_name # Log with plugin name
-                    # if name == "detect_RITnet":
-                    #     method_label = f"RITnet: {inst.class_name}"
-                    # elif name == "detect_ADGBC":
-                    #     method_label = f"AD-GBC: {inst.class_name}"
-                    # elif name == "detect":
-                    #     method_label = f"{inst.class_name}.detect"
 
                     inst.latency_log.append({
                         "plugin": method_label,
