@@ -102,7 +102,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         model_path_mambaliteunet = os.path.join(plugin_dir, "mambaliteunet_nn_best.pth")
         model_path_rollingunet = os.path.join(plugin_dir, "rollingunet_nn_best.pth")
         model_path_ulvmunet = os.path.join(plugin_dir, "ulvm_nn_best.pth")
-	    model_path_ukan = os.path.join(plugin_dir, "ukan_nn_best.pth")
+        model_path_ukan = os.path.join(plugin_dir, "ukan_nn_best.pth")
 
         # Load only the specified DETECT_MODEL to save memory and startup time
         if DETECT_MODEL == "adgbc":
