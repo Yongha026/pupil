@@ -143,3 +143,10 @@ macs, params = get_model_complexity_info(
 )
 print(f"{macs},{params}")
 
+############# Result in iulab9 A6000 #############
+# adgbc         21.25  GMac  ~42.5 GFLOPs, 28.93 M
+# nn_ritnet     2.39   GMac, ~4.78 GFLOPs, 248.9 k
+# nn_unext      315.93 MMac, ~630  MFLOPs, 1.47  M
+# mambaliteunet 376.52 MMac, ~752  MFLOPs, 910.39k
+# RollingUNet_L 18.49  GMac, ~36.9 GFLOPs, 28.32 M
+# ulvmunet      31.68  MMac, ~63.4 MFLOPs, 49.34 k
