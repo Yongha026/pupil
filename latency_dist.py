@@ -70,3 +70,6 @@ print(f"Average start timestamp: {np.mean(start_timestamps)}")
 # UKAN
 # With total 99 data: 18.8477 ± 0.3765
 # Average start timestamp: 2517877.3691836223
+# PMRNet
+# With total 99 data: 17.9731 ± 1.8053
+# Average start timestamp: 2587212.066454949

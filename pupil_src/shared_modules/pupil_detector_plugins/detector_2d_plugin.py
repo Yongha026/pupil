@@ -232,10 +232,10 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 except Exception as e:
                     logger.error(f"Failed to load UKAN: {e}")
 
-        if DETECT_MODEL == "pmrnet":
+        elif DETECT_MODEL == "pmrnet":
             # 9) PMRNet Model
             try:
-                model = pmrnet.PMRNet(num_classes=4, input_channels=1).to(self.device)
+                model = pmrnet.PMRNet(num_classes=4, in_channels=1).to(self.device)
                 if os.path.exists(model_path_pmrnet):
                     checkpoint = torch.load(model_path_pmrnet, map_location=self.device, weights_only=False)
                     state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
