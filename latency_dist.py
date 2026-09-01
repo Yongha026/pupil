@@ -67,3 +67,6 @@ print(f"Average start timestamp: {np.mean(start_timestamps)}")
 # UltraLight_VMUNet
 # With total 99 data: 17.9419 ± 0.5686
 # Average start timestamp: 2255016.0028650993
+# UKAN
+# With total 99 data: 18.8477 ± 0.3765
+# Average start timestamp: 2517877.3691836223

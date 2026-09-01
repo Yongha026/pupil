@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-DETECT_MODEL = "ukan" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet, mambaliteunet, rollingunet, ulvmunet, ukan
+DETECT_MODEL = "pmrnet" # adgbc, nn_ritnet, nn_unext, 2dcpp, ritnet, mambaliteunet, rollingunet, ulvmunet, ukan, pmrnet
 
 import logging
 import numpy as np
@@ -37,7 +37,7 @@ from plugin import Plugin
 from . import color_scheme
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_pupil_outline
-from pupil_detector_plugins import adgbc, nn_ritnet, nn_unext, mambaliteunet, rollingunet, ulvmunet, ukan
+from pupil_detector_plugins import adgbc, nn_ritnet, nn_unext, mambaliteunet, rollingunet, ulvmunet, ukan, pmrnet
 from draw_ellipse import fit_ellipse
 from CheckEllipse import computeEllipseConfidence
 import cv2
@@ -103,6 +103,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         model_path_rollingunet = os.path.join(plugin_dir, "rollingunet_nn_best.pth")
         model_path_ulvmunet = os.path.join(plugin_dir, "ulvm_nn_best.pth")
         model_path_ukan = os.path.join(plugin_dir, "ukan_nn_best.pth")
+        model_path_pmrnet = os.path.join(plugin_dir, "pmr_nn_best.pth")
 
         # Load only the specified DETECT_MODEL to save memory and startup time
         if DETECT_MODEL == "adgbc":
@@ -230,6 +231,22 @@ class Detector2DPlugin(PupilDetectorPlugin):
                         logger.warning(f"UKAN ckpt file not found at {model_path_ukan}")
                 except Exception as e:
                     logger.error(f"Failed to load UKAN: {e}")
+
+        if DETECT_MODEL == "pmrnet":
+            # 9) PMRNet Model
+            try:
+                model = pmrnet.PMRNet(num_classes=4, input_channels=1).to(self.device)
+                if os.path.exists(model_path_pmrnet):
+                    checkpoint = torch.load(model_path_pmrnet, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["pmrnet"] = model
+                    logger.info("Loaded PMRNet weights successfully")
+                else:
+                    logger.warning(f"PMRNet ckpt file not found at {model_path_pmrnet}")
+            except Exception as e:
+                logger.error(f"Failed to load PMRNet: {e}")
         self.active_model = DETECT_MODEL
 
         ################################################################################################

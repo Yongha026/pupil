@@ -28,17 +28,17 @@ if shared_modules_dir not in sys.path:
 # Now safely import Detector2DPlugin
 from pupil_detector_plugins.detector_2d_plugin import Detector2DPlugin
 
-# 3. Check and prepare checkpoint file matching plugin's expected ckpt name
-plugin_dir = os.path.join(shared_modules_dir, 'pupil_detector_plugins')
-expected_ckpt = os.path.join(plugin_dir, 'ckpt_adgbc.pth')
-source_ckpt = os.path.join(plugin_dir, 'adgbc_nn_best.pth')
+# # 3. Check and prepare checkpoint file matching plugin's expected ckpt name
+# plugin_dir = os.path.join(shared_modules_dir, 'pupil_detector_plugins')
+# expected_ckpt = os.path.join(plugin_dir, 'ckpt_adgbc.pth')
+# source_ckpt = os.path.join(plugin_dir, 'adgbc_nn_best.pth')
 
-if not os.path.exists(expected_ckpt):
-    if os.path.exists(source_ckpt):
-        print(f"Copying {source_ckpt} to expected plugin checkpoint location: {expected_ckpt}")
-        shutil.copy(source_ckpt, expected_ckpt)
-    else:
-        print(f"Warning: Neither {expected_ckpt} nor {source_ckpt} was found. Instantiating model with random weights.")
+# if not os.path.exists(expected_ckpt):
+#     if os.path.exists(source_ckpt):
+#         print(f"Copying {source_ckpt} to expected plugin checkpoint location: {expected_ckpt}")
+#         shutil.copy(source_ckpt, expected_ckpt)
+#     else:
+#         print(f"Warning: Neither {expected_ckpt} nor {source_ckpt} was found. Instantiating model with random weights.")
 
 # 4. Mock classes matching Pupil Labs plugin interfaces
 class MockRoi:

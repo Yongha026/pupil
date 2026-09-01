@@ -6,6 +6,7 @@ UNEXT="unext_nn_best.pth"
 MLU="mambaliteunet_nn_best.pth"
 RUL="rollingunet_nn_best.pth"
 ULVM="ulvm_nn_best.pth"
+UKAN="ukan_nn_best.pth"
 
 # 1. AD-GBC
 if [ -f "$ADGBC" ]; then
@@ -54,4 +55,6 @@ else
   echo "Downloaded ckpt for UltraLight_VMUNet"
 fi
 
+# 7. U-KAN
+# TODO: Google drive storage
 cd ../../../../
