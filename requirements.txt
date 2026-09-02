@@ -38,8 +38,10 @@ torchvision==0.20.1
 timm==1.0.22
 matplotlib==3.10.7
 
-# flops test
+# tests
 ptflops
+pandas
+seaborn
 
 # MambaLiteUNet - might need --no-build-isolation
 causal_conv1d==1.5.0.post8
