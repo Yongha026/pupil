@@ -243,6 +243,43 @@ def world(...):
     del events["pupil"]
     del events["gaze"] # 처리 및 전송 완료한 데이터 삭제 
 ```
+
+
+# 6. pye3d Pupil Detection
+**Model-based approach** - 3D eye model으로 gaze direction estimation.  
+헤드셋 slippage(움직임) 있을 수 있으니 eyeball position은 고정된 값 쓰면 X.  
+최근 값 $\Rightarrow$ 헤드셋 움직 때문.  
+이전 값 $\Rightarrow$ 동공 위치 estimation이 충분한 accuracy 가지기 위한 데이터.  
+ultra-long term, long-term, short-term 3개 timescale로 estim.  
+최근 몇 초부터 몇 분 전까지 데이터 활용  
+3개 타임스텝에서 얻은 high-confidence pupil contours을 유지하기 위해 Spatial binning, temporal forgetting.  
+더 긴 타임스케일의 추론결과는 짧은 타임스케일에서 추론결과에 weak prior로써 작용
+
+**Ultra-long-term model**: Longtime avg eyeball position  
+가장 보수적인 support-building.  
+새로운 pupil observation 들어오지 않으면 supporting(gaze 추론?) 금지  
+오래된 observation들은 미리 정해진 observations 갯수 threshold 넘어갈 때만 삭제. $\Rightarrow$ 지난 1~5분 정도 기록 유지하게.  
+
+**Long-term model**: 비슷하지만 5~25초 기록.
+
+**Short-term model**: 최근 10개 observations(confidence 만족하는)에 fit. 새 observation 들어올 때마다 업데이트. 1초 미만.
+
+Ultra long term은 더 짧은 timescale에 fit하는데 robustness를 확보하기 위해 사용. long, short term 들은 각각 pupil radius, gaze direction 뽑는데 활용.    
+1. Eye model에 따라 raw estimates 뽑기
+2. Corneal interface의 refraction효과(=glint?)에 따라 수정.  
+
+Pupil radius는 카메라와 거리에 따라 달라지니 measurement error발생하지 않도록 조심해야.  
+Absolute scale에서 생긴 에러(동공 위치 잘못 측정해서)는 relative pupil size(동공 위치 추론과는 무관)보다 별로 안 중요하다.(이 문장 자체가 이해 안 감)  
+Long-term이 stability와 recentness 사이에 밸런스.  
+
+가장 최근 데이터인 Short-term model은 raw gaze direction 추론에 사용.  
+individual pupil observation에 무조건 발생하는 detection noise를 줄이기 위한 gaze-direction aware filter로써 사용가능.  
+Slippage 때문에 눈 위치 바뀌면 에러. Short-term 모델의 recentness가 중요하다.(왜 recentness?)  
+
+각막에서 빛 굴절되는데, 그거 correction해야함. pye3d는 pupil size, gaze direction을 굴절 보정 전에 수정함.  
+(그럼 pye3d, refraction correction 두 개 보정본 받고 또 보정해서 총 3번 보정하는건가?)
+
+
 ---
 # 99. Gemini 정리
 ### Brief Flow of the Total System
