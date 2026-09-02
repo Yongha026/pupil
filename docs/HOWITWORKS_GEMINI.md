@@ -154,3 +154,75 @@
 | **Ultra-long-term** | 1 ~ 5분 | 가장 보수적, 공간 빈(Bin) 교체 및 임계치 이하 삭제 방지 | 장기 평균 안구 위치 산출, 단기 모델 피팅의 **약한 사전확률(Weak prior)** 기준점 |
 | **Long-term** | 5 ~ 25초 | 최근 수십 초 데이터 위주로 유지 (안정성-최신성 절충) | 안구 거리 안정화를 통한 **동공 반경(Pupil radius)** 측정 기준 |
 | **Short-term** | < 1초 (최근 10 프레임) | 최신 고신뢰도 관측치 10개 실시간 교체 (최신성 극대화) | 헤드셋 슬립 즉시 반영 및 2D 노이즈를 스무딩한 **시선 방향(Raw gaze direction)** 도출 |
+
+---
+
+# 7. 전체 파이프라인에서 pye3d의 실행 시점과 3D Gaze 추정 흐름
+
+> 관련 코드:  
+> - [`eye.py`](file:///D:/School/4-3/pupil/pupil_src/launchables/eye.py) (Lines 711~776: 메인 프레임 이벤트 루프 및 IPC 송신)  
+> - [`detector_base_plugin.py`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/pupil_detector_plugins/detector_base_plugin.py#L108) (Lines 118~130: `recent_events` 순차 호출 및 이전 검출 결과 전달)  
+> - [`pye3d_plugin.py`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/pupil_detector_plugins/pye3d_plugin.py#L151) (Lines 151~173: 2D 검출 결과 수신 및 3D 모델 업데이트/추론)  
+> - [`gazer_headset.py`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/gaze_mapping/gazer_3d/gazer_headset.py#L388) (Lines 388~400: Gazer3D의 3D 특징 추출 및 월드 시선 투영)
+
+### 1. pye3d는 정확히 어느 타임스텝에 실행되는가?
+
+`pye3d`는 World 프로세스가 아니라 **Eye 프로세스([`eye.py`](file:///D:/School/4-3/pupil/pupil_src/launchables/eye.py#L55)) 내부에서 매 프레임마다** 실행됩니다.
+
+실행 순서는 플러그인의 `.order` 속성에 의해 결정됩니다:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cam as Eye Camera Source
+    participant Eye as eye.py Loop
+    participant D2D as 2D Detector (order: 0.100)
+    participant P3D as pye3d Plugin (order: 0.101)
+    participant ZMQ as ZeroMQ IPC Backbone
+    participant World as world.py (Pupil_Data_Relay & Gazer3D)
+
+    Cam->>Eye: 1. 새 안구 영상 획득 (frame)
+    Eye->>D2D: 2. recent_events(event) 호출
+    Note over D2D: 2D 동공 타원 검출<br/>(C++ 또는 Custom UNet)
+    D2D-->>Eye: event["pupil_detection_results"] = [datum_2d]
+    Eye->>P3D: 3. recent_events(event) 호출
+    Note over P3D: event에서 datum_2d 획득<br/>pye3d 3D 안구 모델 피팅<br/>각막 굴절 물리 역보정 수행
+    P3D-->>Eye: event["pupil_detection_results"] = [datum_2d, datum_3d]
+    Eye->>ZMQ: 4. pupil_socket.send() 로 datum_2d 및 datum_3d IPC 퍼블리시
+    ZMQ->>World: 5. "pupil" 토픽 수신
+    Note over World: Gazer3D가 datum_3d의 시선 벡터를<br/>월드 카메라 3D 좌표계로 변환 및 2D 픽셀 투영
+```
+
+* **Step 1 (2D 검출, order = 0.100):**  
+  [`Detector2DPlugin`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_plugin.py#L38) 또는 커스텀 UNet이 안구 영상에서 2D 동공 타원(`datum_2d`)을 검출하고 `event["pupil_detection_results"]`에 넣습니다.
+* **Step 2 (3D 모델 피팅 및 굴절 역보정, order = 0.101):**  
+  바로 다음 순서로 [`Pye3DPlugin`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/pupil_detector_plugins/pye3d_plugin.py#L53)의 `recent_events()`가 실행됩니다. 이 플러그인은 방금 2D 검출기가 생성한 `datum_2d`를 넘겨받아 `self.detector.update_and_detect(datum_2d, frame.gray)`를 실행합니다.
+  * 여기서 3개 타임스케일(Ultra-long, Long, Short) 안구 모델을 업데이트하고,
+  * 각막 굴절(Refraction)을 역보정하여 3D 안구 중심(`sphere.center`)과 **3D 광학 시선 벡터(`circle_3d.normal`)**가 담긴 `datum_3d`를 생성합니다.
+* **Step 3 (IPC 전송):**  
+  `eye.py`는 `datum_2d`(`topic: pupil.x.2d`)와 `datum_3d`(`topic: pupil.x.3d`)를 모두 ZeroMQ IPC로 전송합니다.
+
+---
+
+### 2. 가장 중요한 차이: pye3d의 3D Gaze vs Gazer3D의 World Gaze
+
+"pye3d도 시선(gaze)을 뽑고, Gazer도 시선(gaze)을 뽑는데 둘의 차이가 무엇인가?"라는 의문이 생길 수 있습니다. 둘은 좌표계가 다릅니다:
+
+1. **pye3d가 구하는 3D 시선 (`pupil.x.3d` in eye.py):**
+   * **좌표계:** **눈 카메라(Eye Camera) 3차원 좌표계**
+   * 안구 중심(`sphere.center`)에서 3D 동공 중심(`circle_3d.center`)을 향하는 3차원 단위 벡터 $\vec{v}_{eye} = (x, y, z)$입니다.
+   * 즉, "내 눈알이 눈 카메라를 기준으로 어느 방향을 향해 돌아가 있는가(Eye-in-Head orientation)"를 측정한 것입니다.
+   * 아직 바깥 세상(월드 카메라가 보고 있는 장면)의 어느 물체/픽셀을 보는지 알 수 없습니다.
+
+2. **Gazer3D가 구하는 최종 시선 (`gaze.3d.xx` in world.py):**
+   * **좌표계:** **월드 장면 카메라(World Camera) 2D/3D 좌표계**
+   * 사용자가 캘리브레이션(Screen marker, Single marker 등)을 수행하면, 눈 카메라와 월드 카메라 간의 3차원 공간적 상대 위치/각도(Extrinsics transformation matrix)가 계산됩니다.
+   * [`Gazer3D`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/gaze_mapping/gazer_3d/gazer_headset.py#L346)는 `pye3d`가 보내준 눈 카메라 기준 3D 시선 벡터를 이 변환 행렬을 통해 **월드 카메라 3D 공간으로 회전/이동**시킨 뒤, 월드 카메라 이미지 평면에 투영하여 **"사용자가 월드 영상의 몇 번 픽셀 $(u, v)$을 보고 있는가"**를 최종 계산합니다.
+
+---
+
+### 3. 결론 요약
+
+* **발생 시점:** `eye.py` 프로세스 내에서 2D 동공 타원 검출 직후 (`order: 0.100` $\rightarrow$ `order: 0.101`).
+* **pye3d의 역할:** 2D 타원들을 누적해 3D 안구 모델을 피팅하고 각막 굴절을 보정하여 **눈 카메라 기준의 3D 시선 벡터와 3D 안구 중심**을 도출.
+* **이후 월드 프로세스(Gazer3D)의 역할:** `pye3d`의 3D 시선 벡터를 넘겨받아 캘리브레이션 행렬로 월드 카메라 좌표계로 변환하여 **현실 장면 화면 상의 최종 시선 좌표**로 투영.

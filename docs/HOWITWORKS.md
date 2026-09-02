@@ -284,26 +284,30 @@ Slippage 때문에 눈 위치 바뀌면 에러. Short-term 모델의 recentness�
 # 99. Gemini 정리
 ### Brief Flow of the Total System
 
-graph TD  
-    A[Camera Feed / Video Source] $\rightarrow$ |Capture Frame| B(Eye Process: eye.py)  
-    B $\rightarrow$ |Calls recent_events| C(DetectorBasePlugin)  
-    C $\rightarrow$ |Calls detect| D[Your Custom UNet Inference in detector_2d_plugin.py]  
-    D $\rightarrow$ |Returns Pupil Datum| C  
-    C $\rightarrow$ |IPC Publish pupil topic| E[ZeroMQ IPC Backbone]  
-    E $\rightarrow$ |IPC Subscribe pupil topic| F(World Process: world.py via Pupil_Data_Relay)  
-    F $\rightarrow$ |Maps pupil data| G[Active Gaze Mapper eg. Gazer2D]  
-    G $\rightarrow$ |Outputs Gaze Coordinates| H[ZMQ IPC gaze topic & GUI Renderer]  
+```mermaid
+    graph TD
+        A[Eye Camera Feed / Source] -->|Capture Frame| B(Eye Process: eye.py)
+        B -->|1. recent_events order: 0.100| C1[2D Detector: detector_2d_plugin.py / UNet]
+        C1 -->|Outputs 2D Ellipse| D1[2D Pupil Datum: pupil.x.2d]
+        D1 -->|2. recent_events order: 0.101| C2[3D Detector: pye3d_plugin.py]
+        B -->|Provides Eye Frame| C2
+        C2 -->|3D Eye Model Fitting & Refraction Correction| D2[3D Pupil Datum: pupil.x.3d]
+        D1 -->|IPC Publish pupil topic| E[ZeroMQ IPC Backbone]
+        D2 -->|IPC Publish pupil topic| E
+        E -->|IPC Subscribe pupil topic| F(World Process: world.py via Pupil_Data_Relay)
+        F -->|Passes 2D / 3D data| G[Active Gazer: Gazer2D or Gazer3D]
+        G -->|Transforms to World Coordinates| H[ZMQ IPC gaze topic & GUI Renderer]
+``` 
 
 #### Step-by-Step System Flow:
 
-  1. Frame Capture: The eye camera capture plugin grabs a new video frame and passes it to the event dictionary in
-  the eye.py:55 process.
-  2. Model Inference: detector_2d_plugin.py:38 processes the frame with your custom UNet model, extracting
-  coordinates of the pupil center, diameter, and confidence, returning a standardized dictionary called a pupil_datum.
-  3. Data Streaming: The eye.py:55 process streams this pupil_datum over ZeroMQ IPC under the pupil topic.
-  4. Relaying: The world.py:18 process receives the stream via pupil_data_relay.py:16.
-  5. Gaze Estimation: The relay feeds the data into the active gaze mapping plugin (e.g. Gazer2D), which applies the
-  calibration math to project the raw pupil coordinates into gaze coordinates in the world coordinate space.
-  6. Consumer Distribution: The resulting gaze coordinates are broadcasted under the gaze topic for real-time
-  visualization overlays, network APIs, or disk recordings.
+  1. **Frame Capture**: The eye camera capture plugin grabs a new video frame and passes it to the event dictionary in the [`eye.py`](file:///D:/School/4-3/pupil/pupil_src/launchables/eye.py#L55) process.
+  2. **2D Model Inference (order: 0.100)**: [`detector_2d_plugin.py`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_plugin.py#L38) processes the frame with the C++ detector or custom UNet, extracting 2D coordinates of the pupil center, diameter, confidence, and ellipse, saving a `pupil_datum` (`pupil.x.2d`).
+  3. **3D Eye Model & Gaze Vector via pye3d (order: 0.101)**: Immediately afterwards in the **same eye process**, [`pye3d_plugin.py`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/pupil_detector_plugins/pye3d_plugin.py#L53) takes the 2D pupil datum. It fits the 3D eye model across 3 timescales, corrects for corneal refraction, and produces 3D eyeball center and 3D optical gaze vector (`pupil.x.3d`).
+  4. **Data Streaming**: The eye process streams both 2D and 3D pupil datums over ZeroMQ IPC under the `pupil` topic.
+  5. **Relaying**: The [`world.py`](file:///D:/School/4-3/pupil/pupil_src/launchables/world.py#L18) process receives the stream via [`pupil_data_relay.py`](file:///D:/School/4-3/pupil/pupil_src/shared_modules/pupil_data_relay.py#L16).
+  6. **Gaze Estimation**: The relay feeds the data into the active gaze mapping plugin:
+     - If using **Gazer2D**: maps 2D pupil coordinates to world video coordinates.
+     - If using **Gazer3D**: maps the 3D gaze vector from eye camera space to world camera space using calibration pose matrices.
+  7. **Consumer Distribution**: The resulting gaze coordinates are broadcasted under the `gaze` topic for real-time visualization overlays, network APIs, or disk recordings.
 
