@@ -89,169 +89,17 @@ class Detector2DPlugin(PupilDetectorPlugin):
         기존 __init__에 model_path, device, preview 등을 인자로 추가.
         """
 
-        plugin_dir = os.path.join(os.path.dirname(__file__),"model_ckpts")
+        self.plugin_dir = os.path.join(os.path.dirname(__file__), "model_ckpts")
         device_str = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device_str)
         self.models = {}
 
-
-        model_path_adgbc = os.path.join(plugin_dir, "adgbc_nn_best.pth")
-        model_path_ritnet_orig = os.path.join(plugin_dir, "best_model.pkl")
-        model_path_nn_ritnet = os.path.join(plugin_dir, "ritnet_nn_best.pth")
-        model_path_nn_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
-        model_path_mambaliteunet = os.path.join(plugin_dir, "mambaliteunet_nn_best.pth")
-        model_path_rollingunet = os.path.join(plugin_dir, "rollingunet_nn_best.pth")
-        model_path_ulvmunet = os.path.join(plugin_dir, "ulvm_nn_best.pth")
-        model_path_ukan = os.path.join(plugin_dir, "ukan_nn_best.pth")
-        model_path_pmrnet = os.path.join(plugin_dir, "pmr_nn_best.pth")
-
-        # Load only the specified DETECT_MODEL to save memory and startup time
-        if DETECT_MODEL == "adgbc":
-            # 1) AD-GBC Model
-            try:
-                model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
-                if os.path.exists(model_path_adgbc):
-                    checkpoint = torch.load(model_path_adgbc, map_location=self.device, weights_only=False)
-                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                    model.load_state_dict(state_dict)
-                    model.eval()
-                    self.models["adgbc"] = model
-                    logger.info("Loaded AD-GBC weights successfully")
-                else:
-                    logger.warning(f"AD-GBC ckpt file not found at {model_path_adgbc}")
-            except Exception as e:
-                logger.error(f"Failed to load AD-GBC: {e}")
-
-        elif DETECT_MODEL == "ritnet":
-            # 2) RITnet Model (Original Densenet)
-            try:
-                model = model_dict['densenet']().to(self.device)
-                if os.path.exists(model_path_ritnet_orig):
-                    model.load_state_dict(torch.load(model_path_ritnet_orig, map_location=self.device, weights_only=False))
-                    model.eval()
-                    self.models["ritnet"] = model
-                    logger.info("Loaded RITnet (original) weights successfully")
-                else:
-                    logger.warning(f"RITnet original ckpt file not found at {model_path_ritnet_orig}")
-            except Exception as e:
-                logger.error(f"Failed to load RITnet: {e}")
-
-        elif DETECT_MODEL == "nn_ritnet":
-            # 3) nnRITnet Model
-            try:
-                model = nn_ritnet.DenseNet2D(in_channels=1, out_channels=4, dropout=True, prob=0.2, deep_supervision=False).to(self.device)
-                if os.path.exists(model_path_nn_ritnet):
-                    checkpoint = torch.load(model_path_nn_ritnet, map_location=self.device, weights_only=False)
-                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                    model.load_state_dict(state_dict)
-                    model.eval()
-                    self.models["nn_ritnet"] = model
-                    logger.info("Loaded nnRITnet weights successfully")
-                else:
-                    logger.warning(f"nnRITnet ckpt file not found at {model_path_nn_ritnet}")
-            except Exception as e:
-                logger.error(f"Failed to load nnRITnet: {e}")
-
-        elif DETECT_MODEL == "nn_unext":
-            # 4) UNeXt Model
-            try:
-                model = nn_unext.UNext(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
-                if os.path.exists(model_path_nn_unext):
-                    checkpoint = torch.load(model_path_nn_unext, map_location=self.device, weights_only=False)
-                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                    model.load_state_dict(state_dict)
-                    model.eval()
-                    self.models["nn_unext"] = model
-                    logger.info("Loaded UNeXt weights successfully")
-                else:
-                    logger.warning(f"UNeXt ckpt file not found at {model_path_nn_unext}")
-            except Exception as e:
-                logger.error(f"Failed to load UNeXt: {e}")
-        elif DETECT_MODEL == "mambaliteunet":
-            # 5) MambaLiteUNet Model
-            try:
-                model = mambaliteunet.MambaLiteUNet(num_classes=4, input_channels=1).to(self.device)
-                if os.path.exists(model_path_nn_unext):
-                    checkpoint = torch.load(model_path_mambaliteunet, map_location=self.device, weights_only=False)
-                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                    model.load_state_dict(state_dict)
-                    model.eval()
-                    self.models["mambaliteunet"] = model
-                    logger.info("Loaded MambaLiteUNet weights successfully")
-                else:
-                    logger.warning(f"MambaLiteUNet ckpt file not found at {model_path_mambaliteunet}")
-            except Exception as e:
-                logger.error(f"Failed to load MambaLiteUNet: {e}")
-
-        elif DETECT_MODEL == "rollingunet":
-            # 6) Rolling_Unet_L Model
-            try:
-                model = rollingunet.Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
-                if os.path.exists(model_path_nn_unext):
-                    checkpoint = torch.load(model_path_rollingunet, map_location=self.device, weights_only=False)
-                    state_dict = checkpoint["network_weights"] if (
-                                isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                    model.load_state_dict(state_dict)
-                    model.eval()
-                    self.models["rollingunet"] = model
-                    logger.info("Loaded RollingUNet_L weights successfully")
-                else:
-                    logger.warning(f"RollingUNet_L ckpt file not found at {model_path_rollingunet}")
-            except Exception as e:
-                logger.error(f"Failed to load RollingUNet_L: {e}")
-
-        elif DETECT_MODEL == "ulvmunet":
-            # 7) UltraLight_VM_UNet Model
-            try:
-                model = ulvmunet.UltraLight_VM_UNet(num_classes=4, input_channels=1).to(self.device)
-                if os.path.exists(model_path_nn_unext):
-                    checkpoint = torch.load(model_path_ulvmunet, map_location=self.device, weights_only=False)
-                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                    model.load_state_dict(state_dict)
-                    model.eval()
-                    self.models["ulvmunet"] = model
-                    logger.info("Loaded ULVMUNet weights successfully")
-                else:
-                    logger.warning(f"ULVMUNet ckpt file not found at {model_path_ulvmunet}")
-            except Exception as e:
-                logger.error(f"Failed to load ULVMUNet: {e}")
-
-        elif DETECT_MODEL == "ukan":
-                # 8) UKAN
-                try:
-                    model =ukan.UKAN(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
-                    if os.path.exists(model_path_ukan):
-                        checkpoint = torch.load(model_path_ukan, map_location=self.device, weights_only=False)
-                        state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                        model.load_state_dict(state_dict)
-                        model.eval()
-                        self.models["ukan"] = model
-                        logger.info("Loaded UKAN weights successfully")
-                    else:
-                        logger.warning(f"UKAN ckpt file not found at {model_path_ukan}")
-                except Exception as e:
-                    logger.error(f"Failed to load UKAN: {e}")
-
-        elif DETECT_MODEL == "pmrnet":
-            # 9) PMRNet Model
-            try:
-                model = pmrnet.PMRNet(num_classes=4, in_channels=1).to(self.device)
-                if os.path.exists(model_path_pmrnet):
-                    checkpoint = torch.load(model_path_pmrnet, map_location=self.device, weights_only=False)
-                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
-                    model.load_state_dict(state_dict)
-                    model.eval()
-                    self.models["pmrnet"] = model
-                    logger.info("Loaded PMRNet weights successfully")
-                else:
-                    logger.warning(f"PMRNet ckpt file not found at {model_path_pmrnet}")
-            except Exception as e:
-                logger.error(f"Failed to load PMRNet: {e}")
-        self.active_model = DETECT_MODEL
+        # Set initial active_model from properties if saved, otherwise default to DETECT_MODEL
+        initial_model = (properties or {}).get("active_model", DETECT_MODEL)
+        self._active_model = initial_model
+        self.set_active_model(initial_model)
 
         ################################################################################################
-
-
 
         self.transform = torchvision.transforms.Compose(
             [
@@ -263,13 +111,195 @@ class Detector2DPlugin(PupilDetectorPlugin):
             clipLimit=CLIP_LIMIT, tileGridSize=(TILE_GRID_SIZE, TILE_GRID_SIZE)
         )
 
+    @property
+    def active_model(self):
+        return self._active_model
+
+    @active_model.setter
+    def active_model(self, model_name):
+        self.set_active_model(model_name)
+
+    def set_active_model(self, model_name):
+        global DETECT_MODEL
+        DETECT_MODEL = model_name
+        self._active_model = model_name
+        logger.info(f"Active model set to: {model_name}")
+        if model_name != "2dcpp" and model_name not in self.models:
+            self.load_model(model_name)
+
+    def load_model(self, model_name):
+        if model_name == "2dcpp":
+            return None
+
+        if model_name in self.models:
+            return self.models[model_name]
+
+        model = None
+        if model_name == "adgbc":
+            # 1) AD-GBC Model
+            try:
+                model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "adgbc_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["adgbc"] = model
+                    logger.info("Loaded AD-GBC weights successfully")
+                else:
+                    logger.warning(f"AD-GBC ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load AD-GBC: {e}")
+
+        elif model_name == "ritnet":
+            # 2) RITnet Model (Original Densenet)
+            try:
+                model = model_dict['densenet']().to(self.device)
+                model_path = os.path.join(self.plugin_dir, "best_model.pkl")
+                if os.path.exists(model_path):
+                    model.load_state_dict(torch.load(model_path, map_location=self.device, weights_only=False))
+                    model.eval()
+                    self.models["ritnet"] = model
+                    logger.info("Loaded RITnet (original) weights successfully")
+                else:
+                    logger.warning(f"RITnet original ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load RITnet: {e}")
+
+        elif model_name == "nn_ritnet":
+            # 3) nnRITnet Model
+            try:
+                model = nn_ritnet.DenseNet2D(in_channels=1, out_channels=4, dropout=True, prob=0.2, deep_supervision=False).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "ritnet_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["nn_ritnet"] = model
+                    logger.info("Loaded nnRITnet weights successfully")
+                else:
+                    logger.warning(f"nnRITnet ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load nnRITnet: {e}")
+
+        elif model_name == "nn_unext":
+            # 4) UNeXt Model
+            try:
+                model = nn_unext.UNext(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "unext_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["nn_unext"] = model
+                    logger.info("Loaded UNeXt weights successfully")
+                else:
+                    logger.warning(f"UNeXt ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load UNeXt: {e}")
+
+        elif model_name == "mambaliteunet":
+            # 5) MambaLiteUNet Model
+            try:
+                model = mambaliteunet.MambaLiteUNet(num_classes=4, input_channels=1).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "mambaliteunet_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["mambaliteunet"] = model
+                    logger.info("Loaded MambaLiteUNet weights successfully")
+                else:
+                    logger.warning(f"MambaLiteUNet ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load MambaLiteUNet: {e}")
+
+        elif model_name == "rollingunet":
+            # 6) Rolling_Unet_L Model
+            try:
+                model = rollingunet.Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "rollingunet_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (
+                                isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["rollingunet"] = model
+                    logger.info("Loaded RollingUNet_L weights successfully")
+                else:
+                    logger.warning(f"RollingUNet_L ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load RollingUNet_L: {e}")
+
+        elif model_name == "ulvmunet":
+            # 7) UltraLight_VM_UNet Model
+            try:
+                model = ulvmunet.UltraLight_VM_UNet(num_classes=4, input_channels=1).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "ulvm_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["ulvmunet"] = model
+                    logger.info("Loaded ULVMUNet weights successfully")
+                else:
+                    logger.warning(f"ULVMUNet ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load ULVMUNet: {e}")
+
+        elif model_name == "ukan":
+            # 8) UKAN
+            try:
+                model = ukan.UKAN(num_classes=4, input_channels=1, deep_supervision=False).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "ukan_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["ukan"] = model
+                    logger.info("Loaded UKAN weights successfully")
+                else:
+                    logger.warning(f"UKAN ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load UKAN: {e}")
+
+        elif model_name == "pmrnet":
+            # 9) PMRNet Model
+            try:
+                try:
+                    model = pmrnet.PMRNet(num_classes=4, in_channels=1).to(self.device)
+                except TypeError:
+                    model = pmrnet.PMRNet(num_classes=4, input_channels=1).to(self.device)
+                model_path = os.path.join(self.plugin_dir, "pmr_nn_best.pth")
+                if os.path.exists(model_path):
+                    checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+                    state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    self.models["pmrnet"] = model
+                    logger.info("Loaded PMRNet weights successfully")
+                else:
+                    logger.warning(f"PMRNet ckpt file not found at {model_path}")
+            except Exception as e:
+                logger.error(f"Failed to load PMRNet: {e}")
+
+        return model
+
     def get_init_dict(self):
         init_dict = super().get_init_dict()
         init_dict["properties"] = self.detector_2d.get_properties()
+        init_dict["properties"]["active_model"] = self.active_model
         return init_dict
 
     def detect(self, frame, **kwargs):
-        if not DETECT_MODEL == "2dcpp":
+        if not self.active_model == "2dcpp":
             return self.detect_MODEL(frame, **kwargs)
         else:
             # convert roi-plugin to detector roi
@@ -584,6 +614,15 @@ class Detector2DPlugin(PupilDetectorPlugin):
             + "Adjust the pupil min and pupil max ranges (red circles) so that the detected pupil size (green circle) is within the bounds."
         )
         self.menu.append(info)
+        self.menu.append(
+            ui.Selector(
+                "active_model",
+                self,
+                label="Active Model",
+                selection=["adgbc", "nn_ritnet", "nn_unext", "2dcpp", "ritnet", "mambaliteunet", "rollingunet", "ulvmunet", "ukan", "pmrnet"],
+                setter=self.set_active_model,
+            )
+        )
         self.menu.append(
             ui.Slider(
                 "intensity_range",
