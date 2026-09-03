@@ -1,0 +1,13 @@
+python pupil_src/main.py 
+Error calling git: "Command '['git', 'describe', '--tags', '--long']' returned non-zero exit status 128." 
+ output: "b'fatal: \xec\x9d\xb4\xeb\xa6\x84\xec\x9d\xb4 \xec\x97\x86\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4. \xec\x95\x84\xeb\xac\xb4\xea\xb2\x83\xeb\x8f\x84 \xec\x84\xa4\xeb\xaa\x85\xed\x95\xa0 \xec\x88\x98 \xec\x97\x86\xec\x8a\xb5\xeb\x8b\x88\xeb\x8b\xa4.\n'"
+Traceback (most recent call last):
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/main.py", line 34, in <module>
+    app_version = get_version()
+                  ^^^^^^^^^^^^^
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/version_utils.py", line 84, in get_version
+    version_string = pupil_version_string()
+                     ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/version_utils.py", line 58, in pupil_version_string
+    raise ValueError("Version Error")
+ValueError: Version Error
