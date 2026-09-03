@@ -1,0 +1,59 @@
+python pupil_src/main.py 
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.4.6 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "<string>", line 1, in <module>
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/spawn.py", line 120, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/spawn.py", line 133, in _main
+    return self._bootstrap(parent_sentinel)
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 123, in world
+    from gl_utils import GLFWErrorReporting
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gl_utils/__init__.py", line 11, in <module>
+    from .draw import draw_circle_filled_func_builder
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gl_utils/draw.py", line 16, in <module>
+    from pyglui.cygl.utils import RGBA
+Process world:
+Traceback (most recent call last):
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 123, in world
+    from gl_utils import GLFWErrorReporting
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gl_utils/__init__.py", line 11, in <module>
+    from .draw import draw_circle_filled_func_builder
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gl_utils/draw.py", line 16, in <module>
+    from pyglui.cygl.utils import RGBA
+  File "src/pyglui/cygl/utils.pyx", line 1, in init pyglui.cygl.utils
+ImportError: numpy.core.multiarray failed to import (auto-generated because you didn't call 'numpy.import_array()' after cimporting numpy; use '<void>numpy._import_array' to disable if you are certain you don't need it).
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 854, in world
+    for p in g_pool.plugins:
+             ^^^^^^
+UnboundLocalError: cannot access local variable 'g_pool' where it is not associated with a value
+[18:04:30] ERROR    world - launchables.world: Process Capture crashed with trace:                                                                                                                        world.py:850
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 123, in world                                                                                         
+                        from gl_utils import GLFWErrorReporting                                                                                                                                                       
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gl_utils/__init__.py", line 11, in <module>                                                                        
+                        from .draw import draw_circle_filled_func_builder                                                                                                                                             
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gl_utils/draw.py", line 16, in <module>                                                                            
+                        from pyglui.cygl.utils import RGBA                                                                                                                                                            
+                      File "src/pyglui/cygl/utils.pyx", line 1, in init pyglui.cygl.utils                                                                                                                             
+                    ImportError: numpy.core.multiarray failed to import (auto-generated because you didn't call 'numpy.import_array()' after cimporting numpy; use '<void>numpy._import_array' to disable             
+                    if you are certain you don't need it).     
