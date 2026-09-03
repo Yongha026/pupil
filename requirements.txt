@@ -42,8 +42,10 @@ matplotlib==3.10.7
 ptflops
 pandas
 seaborn
+gdown
 
 # MambaLiteUNet - might need --no-build-isolation
 causal_conv1d==1.5.0.post8
 mamba-ssm==2.2.4
-
+transformers==4.36.2
+scikit-image==0.26.0
