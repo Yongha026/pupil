@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 class Detector2DPlugin(PupilDetectorPlugin):
     pupil_detection_identifier = "2d"
-    pupil_detection_method = "2d c++"
+    pupil_detection_method = DETECT_MODEL
 
     label = "C++ 2d detector"
     icon_font = "pupil_icons"

@@ -77,17 +77,23 @@ print(f"Average start timestamp: {np.mean(start_timestamps)}")
 
 #################### 100 loops in iulab3 #################
 # PMRNet
-# With total 99 data: 50.0790 ± 6.6499
-# Average start timestamp: 778319.652085933
+# With total 99 data: 4.2352 ± 0.2028
+# Average start timestamp: 779775.6242725573
 #nn-unext
-# With total 99 data: 4.6817 ± 0.1021
-# Average start timestamp: 778443.0946585507
+# With total 99 data: 2.1745 ± 0.1304
+# Average start timestamp: 780152.4097746328
 # ukan
-# With total 99 data: 27.9682 ± 1.2545
-# Average start timestamp: 778514.3190870568
+# With total 99 data: 5.6580 ± 1.8668
+# Average start timestamp: 780115.468372964
 # nn_ritnet
-# With total 99 data: 13.2585 ± 1.1377
-# Average start timestamp: 778566.4052418249
+# With total 99 data: 1.7388 ± 0.0374
+# Average start timestamp: 780191.5932254998
 # adgbc
-# With total 99 data: 119.8759 ± 10.9411
-# Average start timestamp: 778666.3760738451
+# With total 99 data: 35.1787 ± 11.0227
+# Average start timestamp: 779975.5138700195
+# ulvmunet
+# With total 99 data: 5.4874 ± 0.1466
+# Average start timestamp: 780257.9859211408
+# mambaliteunet
+# With total 99 data: 15.6320 ± 3.4777
+# Average start timestamp: 780294.648430219
