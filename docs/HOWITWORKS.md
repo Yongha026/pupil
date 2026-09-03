@@ -279,6 +279,53 @@ Slippage 때문에 눈 위치 바뀌면 에러. Short-term 모델의 recentness�
 각막에서 빛 굴절되는데, 그거 correction해야함. pye3d는 pupil size, gaze direction을 굴절 보정 전에 수정함.  
 (그럼 pye3d, refraction correction 두 개 보정본 받고 또 보정해서 총 3번 보정하는건가?)
 
+**Coordinates**: x: horizontal, y: vertical, z: optical axis  
+eye0 카메라는 위아래 뒤집힌 채로 달려있어서 좌표도 반대인 점 유의
+
+# 7. Official docs
+## Terminology
+[논문 읽어봐라](https://arxiv.org/pdf/1405.0006)  
+[정리본](./Pupil_Paper.md)  
+
+## Calibration  
+Pupil position & Gaze target 관계 계산.  
+## Time
+1. System Time: 소프트웨어 시간(현재 날짜+시간) Unix epoch
+2. Pupil Time: 동공 계산 위해 소프트웨어가 따로 돌리는 clock. 모든 timestamp는 pupil time를 따른다.  
+
+다수의 카메라가 free run하고, 싱크가 안 맞을 수 있음. World, eye 이미지는 Source timestamp(Pupil time)를 inherit.  
+데이터 표현은 key-value 형태. Key는 최소 2개: `topic`(object의 type), `timestamp`(Pupil time)  
+
+Pupil 카메라들 싱크 안 맞을 수 있으니 Matching해야함.  
+Pupil 카메라 촬영하고 타임스탬프 부여받으면 고정 오프셋 5ms(카메라 $\rightarrow$ 소프트웨어 transmission delay) 적용.  
+Raw eye data로 detection, pupil datum 생성. 위에서 타임스탬프 매칭 됐으면 binocular, 안됐으면 monocular.  
+## Matching algorithm
+Frame F_i, time T_i(5ms 오프셋 적용 후)  F_i에 pupil detection 해서 나온 pupil datum P_i에 T_i 할당  
+P_i World process에 전송. World process는 P_i 시간순으로 queue(좌,우 따로 queue)  
+조건 2개 따라 분기 : confidence>0.6 AND abs(T_0 - T_1)<cutoff(각 queue의 데이터 따라 dynamic하게 계산됨)
+- 둘 다 조건 맞으면 Match 후 Gaze 생성, 둘 다 queue에서 제거.
+- 안 맞으면 더 오래된거 사용해서 Monocular로 gaze 생성하고 제거. 그나마 최근 데이터는 남아서 다음 데이터와 match.  
+
+P_i monocular로 map. 새 Pupil datum 들어올 때마다 반복.  
+base_data $\rightarrow$ Gaze 레이턴시는 변동(1~6ms)  
+하나의 datum이 다른 여러 datum과 매칭 가능하다(조건 못 맞춘 경우가 많으면): Supersampling 발생. Online으로 진행되며 다음 데이터 언제 올지 모르니 중요하다.  
+
+**Pupil time $\rightarrow$ System time**  
+다른 장비로 촬영한 데이터(System time) 사용할거면 두 시간 맞춰줘야함.  
+Recording 시작할 때 두 시작시간 저장됨  
+- Pupil time: `info.player.json`에 저장(key: `start_time_synced_s`)
+- System time: `start_time_system_s` key에 저장.
+
+## Gaze datum
+`base_data` field: 2개 데이터(양안) 받았으니 타임스탬프 평균내서 assign. 단안이면 해당 타임스탬프 그대로.   
+
+## Plugin API
+Python은 glue일 뿐이고 실제 돌아가는건 c/c++다.  
+**Process structure**: 시작할 땐 eye, world 2개 spawn.  
+- Eye process: Pupil cam에서 이미지 받아서 detection, pupil datum 뿌려주기
+- World process: 실질적 workhorse. World cam에서 이미지 받기, eye process가 뿌린 동공 위치 받아서 gaze로 map. 플러그인 로드(fixation, surface, ...)  
+- Player process: Visualize, post-hoc analyses, video & csv export 
+
 
 ---
 # 99. Gemini 정리

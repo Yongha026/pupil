@@ -16,9 +16,9 @@ import pupil_detectors
 from version_utils import parse_version
 
 from .detector_2d_plugin import Detector2DPlugin
-from .detector_2d_hybrid_plugin import HybridDetectorPlugin
+# from .detector_2d_hybrid_plugin import HybridDetectorPlugin
 from .detector_base_plugin import EVENT_KEY, PupilDetectorPlugin
-# from .dvs_detector_plugin import DVSDetectorPlugin
+from .detector_2d_nn_plugin import nnUNetDetector2DPlugin
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def available_detector_plugins() -> T.List[T.Type[PupilDetectorPlugin]]:
     Returns list of all detectors.
     """
 
-    all_plugins: T.List[T.Type[PupilDetectorPlugin]] = [HybridDetectorPlugin]
+    all_plugins: T.List[T.Type[PupilDetectorPlugin]] = [nnUNetDetector2DPlugin]
 
     try:
         from .pye3d_plugin import Pye3DPlugin
