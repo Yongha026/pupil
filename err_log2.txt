@@ -57,3 +57,115 @@ UnboundLocalError: cannot access local variable 'g_pool' where it is not associa
                       File "src/pyglui/cygl/utils.pyx", line 1, in init pyglui.cygl.utils                                                                                                                             
                     ImportError: numpy.core.multiarray failed to import (auto-generated because you didn't call 'numpy.import_array()' after cimporting numpy; use '<void>numpy._import_array' to disable             
                     if you are certain you don't need it).     
+python pupil_src/main.py 
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+[18:09:09] INFO     world - recorder: Created standard Rec dir at "/home/byeongjun/PycharmProjects/pupil_nnunets/recordings"                                                                            recorder.py:92
+           ERROR    world - launchables.world: Process Capture crashed with trace:                                                                                                                        world.py:850
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 751, in world                                                                                         
+                        p.recent_events(events)                                                                                                                                                                       
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/plugin.py", line 91, in wrapper                                                                                    
+                        res = orig_method(inst, *args, **kwargs)                                                                                                                                                      
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                      
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/video_capture/uvc_backend.py", line 459, in recent_events                                                          
+                        frame = self.uvc_capture.get_frame(0.1)                                                                                                                                                       
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                       
+                      File "uvc_bindings.pyx", line 705, in uvc_bindings.Capture.get_frame                                                                                                                            
+                    TimeoutError                                                                                                                                                                                      
+                                                                                                                                                                                                                      
+           INFO     world - plugin: Plugin Recorder cleaned up at timestamp: 782963.304848729                                                                                                            plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv                                             plugin.py:273
+           INFO     world - plugin: Plugin Accuracy_Visualizer cleaned up at timestamp: 782963.305381677                                                                                                 plugin.py:620
+           INFO     world - plugin: Plugin Blink_Detection cleaned up at timestamp: 782963.305519327                                                                                                     plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv                                             plugin.py:273
+           INFO     world - plugin: Plugin Display_Recent_Gaze cleaned up at timestamp: 782963.305822821                                                                                                 plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv                                             plugin.py:273
+           INFO     world - plugin: Plugin System_Graphs cleaned up at timestamp: 782963.306164784                                                                                                       plugin.py:620
+           INFO     world - plugin: Plugin Plugin_Manager cleaned up at timestamp: 782963.306305673                                                                                                      plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv                                             plugin.py:273
+           INFO     world - plugin: Plugin Log_Display cleaned up at timestamp: 782963.306564675                                                                                                         plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv (fallback)                                  plugin.py:615
+           INFO     world - plugin: Plugin ScreenMarkerChoreographyPlugin cleaned up at timestamp: 782963.306988464                                                                                      plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv                                             plugin.py:273
+           INFO     world - plugin: Plugin Fixation_Detector cleaned up at timestamp: 782963.30729995                                                                                                    plugin.py:620
+           INFO     world - plugin: Plugin Pupil_Data_Relay cleaned up at timestamp: 782963.307416801                                                                                                    plugin.py:620
+           INFO     world - plugin: Plugin NetworkApiPlugin cleaned up at timestamp: 782963.407825036                                                                                                    plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv                                             plugin.py:273
+           INFO     world - plugin: Plugin UVC_Source cleaned up at timestamp: 782963.573980261                                                                                                          plugin.py:620
+           INFO     world - plugin: Plugin File_Manager cleaned up at timestamp: 782963.574207012                                                                                                        plugin.py:620
+           INFO     world - plugin: Saved 1 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/../../latency_logs.csv (fallback)                                  plugin.py:615
+           INFO     world - plugin: Plugin NDSI_Manager cleaned up at timestamp: 782963.580203949                                                                                                        plugin.py:620
+           INFO     world - plugin: Plugin UVC_Manager cleaned up at timestamp: 782963.580694977                                                                                                         plugin.py:620
+Process world:
+Traceback (most recent call last):
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 751, in world
+    p.recent_events(events)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/plugin.py", line 91, in wrapper
+    res = orig_method(inst, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/video_capture/uvc_backend.py", line 459, in recent_events
+    frame = self.uvc_capture.get_frame(0.1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvc_bindings.pyx", line 705, in uvc_bindings.Capture.get_frame
+TimeoutError
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+[18:09:12] ERROR    eye0 - pupil_detector_plugins.pye3d_plugin: Model path ./best_model.pkl not found!                                                                                             pye3d_plugin.py:103
+           ERROR    eye0 - launchables.eye: Process Eye0 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 553, in eye                                                                                             
+                        g_pool.plugins = Plugin_List(g_pool, plugins_to_load)                                                                                                                                         
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                         
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/plugin.py", line 511, in __init__                                                                                  
+                        self.add(plugin, args)                                                                                                                                                                        
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/plugin.py", line 533, in add                                                                                       
+                        plugin_instance = new_plugin_cls(self.g_pool, **args)                                                                                                                                         
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                         
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/pye3d_plugin.py", line 104, in __init__                                                     
+                        raise FileNotFoundError(model_path)                                                                                                                                                           
+                    FileNotFoundError: ./best_model.pkl                                                                                                                                                               
+                                                                                                                                                                                                                      
+           ERROR    eye1 - pupil_detector_plugins.pye3d_plugin: Model path ./best_model.pkl not found!                                                                                             pye3d_plugin.py:103
+           ERROR    eye1 - launchables.eye: Process Eye1 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 553, in eye                                                                                             
+                        g_pool.plugins = Plugin_List(g_pool, plugins_to_load)                                                                                                                                         
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                         
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/plugin.py", line 511, in __init__                                                                                  
+                        self.add(plugin, args)                                                                                                                                                                        
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/plugin.py", line 533, in add                                                                                       
+                        plugin_instance = new_plugin_cls(self.g_pool, **args)                                                                                                                                         
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                         
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/pye3d_plugin.py", line 104, in __init__                                                     
+                        raise FileNotFoundError(model_path)                                                                                                                                                           
+                    FileNotFoundError: ./best_model.pkl                                                                                                                                                               
+                                                                                                                                                                                                                      
+[18:09:13] INFO     eye0 - plugin: Plugin Roi cleaned up at timestamp: 782967.048684082                                                                                                                  plugin.py:620
+           INFO     eye0 - plugin: Plugin UVC_Source cleaned up at timestamp: 782967.066312613                                                                                                           plugin.py:620
+           INFO     eye0 - plugin: Plugin File_Manager cleaned up at timestamp: 782967.066466382                                                                                                         plugin.py:620
+           INFO     eye0 - plugin: Plugin NDSI_Manager cleaned up at timestamp: 782967.071047321                                                                                                         plugin.py:620
+           INFO     eye0 - plugin: Plugin UVC_Manager cleaned up at timestamp: 782967.071333219                                                                                                          plugin.py:620
+           INFO     eye1 - plugin: Plugin Roi cleaned up at timestamp: 782967.372133358                                                                                                                  plugin.py:620
+           INFO     eye1 - plugin: Plugin UVC_Source cleaned up at timestamp: 782967.388930643                                                                                                           plugin.py:620
+           INFO     eye1 - plugin: Plugin File_Manager cleaned up at timestamp: 782967.388974782                                                                                                         plugin.py:620
+           INFO     eye1 - plugin: Plugin NDSI_Manager cleaned up at timestamp: 782967.392573623                                                                                                         plugin.py:620
+           INFO     eye1 - plugin: Plugin UVC_Manager cleaned up at timestamp: 782967.392731943    
