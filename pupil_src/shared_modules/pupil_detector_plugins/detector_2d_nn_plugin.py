@@ -556,29 +556,37 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             self.conf_graph.color,
         )
 
-        if hasattr(self.g_pool, "graphs") and isinstance(self.g_pool.graphs, list):
-            if self.conf_graph not in self.g_pool.graphs:
-                self.g_pool.graphs.append(self.conf_graph)
+        # Retrieve window handle from active context or g_pool
+        window = glfw.get_current_context()
+        if not window and hasattr(self.g_pool, "main_window"):
+            window = self.g_pool.main_window
 
-        if hasattr(self.g_pool, "main_window") and self.g_pool.main_window:
-            self.on_window_resize(self.g_pool.main_window)
+        if window is not None:
+            self.on_window_resize(window)
+        else:
+            render_size = getattr(self.g_pool, "camera_render_size", (550, 500))
+            w = max(int(render_size[0]), 100)
+            h = max(int(render_size[1]), 100)
+            self.conf_graph.scale = 1.0
+            self.conf_graph.adjust_window_size(w, h)
+            self._last_fb_size = (w, h)
+            self._last_content_scale = 1.0
 
     def on_window_resize(self, window, *args):
         if self.conf_graph is not None and window is not None:
             try:
                 fb_size = glfw.get_framebuffer_size(window)
                 content_scale = gl_utils.get_content_scale(window)
+                w = max(int(fb_size[0]), 100)
+                h = max(int(fb_size[1]), 100)
                 self.conf_graph.scale = content_scale
-                self.conf_graph.adjust_window_size(*fb_size)
-                self._last_fb_size = fb_size
+                self.conf_graph.adjust_window_size(w, h)
+                self._last_fb_size = (w, h)
                 self._last_content_scale = content_scale
             except Exception as e:
                 logger.debug(f"Failed to adjust confidence graph size on resize: {e}")
 
     def deinit_ui(self):
-        if hasattr(self.g_pool, "graphs") and isinstance(self.g_pool.graphs, list):
-            if self.conf_graph in self.g_pool.graphs:
-                self.g_pool.graphs.remove(self.conf_graph)
         self.conf_graph = None
         self.conf_grad = None
         super().deinit_ui()
@@ -591,27 +599,43 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             )
 
         if self.show_confidence_graph and self.conf_graph is not None:
-            if hasattr(self.g_pool, "main_window") and self.g_pool.main_window:
+            window = glfw.get_current_context()
+            if not window and hasattr(self.g_pool, "main_window"):
+                window = self.g_pool.main_window
+
+            if window is not None:
                 try:
-                    fb_size = glfw.get_framebuffer_size(self.g_pool.main_window)
-                    content_scale = gl_utils.get_content_scale(self.g_pool.main_window)
+                    fb_size = glfw.get_framebuffer_size(window)
+                    content_scale = gl_utils.get_content_scale(window)
                     if fb_size != self._last_fb_size or content_scale != self._last_content_scale:
+                        w = max(int(fb_size[0]), 100)
+                        h = max(int(fb_size[1]), 100)
                         self.conf_graph.scale = content_scale
-                        self.conf_graph.adjust_window_size(*fb_size)
-                        self._last_fb_size = fb_size
+                        self.conf_graph.adjust_window_size(w, h)
+                        self._last_fb_size = (w, h)
                         self._last_content_scale = content_scale
                 except Exception:
                     pass
+            elif self._last_fb_size is None:
+                render_size = getattr(self.g_pool, "camera_render_size", (550, 500))
+                w = max(int(render_size[0]), 100)
+                h = max(int(render_size[1]), 100)
+                self.conf_graph.scale = 1.0
+                self.conf_graph.adjust_window_size(w, h)
+                self._last_fb_size = (w, h)
+                self._last_content_scale = 1.0
 
-            if self.conf_grad is not None:
-                self.conf_graph.color = mix_smooth(
-                    self.conf_grad[0],
-                    self.conf_grad[1],
-                    self.conf_graph.avg,
-                    self.conf_grad_limits[0],
-                    self.conf_grad_limits[1],
-                )
-            self.conf_graph.draw()
+            # Guard: ensure win_width and win_height are positive to prevent GL_INVALID_VALUE in glOrtho
+            if getattr(self.conf_graph, "win_width", 0) > 0 and getattr(self.conf_graph, "win_height", 0) > 0:
+                if self.conf_grad is not None:
+                    self.conf_graph.color = mix_smooth(
+                        self.conf_grad[0],
+                        self.conf_grad[1],
+                        self.conf_graph.avg,
+                        self.conf_grad_limits[0],
+                        self.conf_grad_limits[1],
+                    )
+                self.conf_graph.draw()
 
     # -------------------------------------------------------------------------
     # Persistence & Cleanup
@@ -625,8 +649,6 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
     def cleanup(self):
         self._unload_current_model()
-        if hasattr(self.g_pool, "graphs") and isinstance(self.g_pool.graphs, list):
-            if self.conf_graph in self.g_pool.graphs:
-                self.g_pool.graphs.remove(self.conf_graph)
         self.conf_graph = None
+        self.conf_grad = None
         super().cleanup()
