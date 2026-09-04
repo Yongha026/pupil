@@ -87,6 +87,21 @@ plugin_dir = os.path.join(user_dir, "plugins")
 if not os.path.isdir(plugin_dir):
     os.mkdir(plugin_dir)
 
+# Initialize single-run timestamped latency log file in logged_latencies folder
+from datetime import datetime
+if "PUPIL_LATENCY_CSV" not in os.environ:
+    base_dir = pupil_base_dir if not running_from_bundle else os.path.dirname(user_dir)
+    latencies_dir = os.path.join(base_dir, "logged_latencies")
+    try:
+        os.makedirs(latencies_dir, exist_ok=True)
+        session_time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        os.environ["PUPIL_LATENCY_CSV"] = os.path.join(
+            latencies_dir, f"latency_{session_time_str}.csv"
+        )
+        print(f"Session latency logging to: {os.environ['PUPIL_LATENCY_CSV']}")
+    except Exception as e:
+        print(f"Could not set up latency log directory: {e}")
+
 from ctypes import c_bool, c_double
 
 # threading and processing

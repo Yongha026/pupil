@@ -272,12 +272,19 @@ class Plugin:
         if not getattr(self, "latency_log", None):
             return
         import csv
+        from datetime import datetime
+
         log_path = os.environ.get("PUPIL_LATENCY_CSV", None)
         if not log_path:
-            log_path = os.path.join(os.path.dirname(__file__), "..", "..", "latency_logs.csv")
-            if not os.path.isdir(os.path.dirname(log_path)):
-                log_path = "latency_logs.csv"
+            root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            log_dir = os.path.join(root_dir, "logged_latencies")
+            os.makedirs(log_dir, exist_ok=True)
+            session_time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            log_path = os.path.join(log_dir, f"latency_{session_time_str}.csv")
+            os.environ["PUPIL_LATENCY_CSV"] = log_path
+
         try:
+            os.makedirs(os.path.dirname(os.path.abspath(log_path)), exist_ok=True)
             file_exists = os.path.exists(log_path)
             with open(log_path, "a", newline="") as f:
                 writer = csv.DictWriter(

@@ -1,5 +1,8 @@
 import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+# Default to GPU 0 if CUDA_VISIBLE_DEVICES is not already set in the environment
+if 'CUDA_VISIBLE_DEVICES' not in os.environ:
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 import sys
 import argparse
 import cv2
@@ -8,6 +11,7 @@ import torch
 import shutil
 import matplotlib.pyplot as plt
 from unittest.mock import MagicMock
+from datetime import datetime
 
 # 1. Setup system-level mocks to bypass Cython/OpenGL binary incompatibilities
 sys.modules['gl_utils'] = MagicMock()
@@ -28,18 +32,6 @@ if shared_modules_dir not in sys.path:
 # Now safely import Detector2DPlugin
 from pupil_detector_plugins.detector_2d_plugin import Detector2DPlugin
 
-# # 3. Check and prepare checkpoint file matching plugin's expected ckpt name
-# plugin_dir = os.path.join(shared_modules_dir, 'pupil_detector_plugins')
-# expected_ckpt = os.path.join(plugin_dir, 'ckpt_adgbc.pth')
-# source_ckpt = os.path.join(plugin_dir, 'adgbc_nn_best.pth')
-
-# if not os.path.exists(expected_ckpt):
-#     if os.path.exists(source_ckpt):
-#         print(f"Copying {source_ckpt} to expected plugin checkpoint location: {expected_ckpt}")
-#         shutil.copy(source_ckpt, expected_ckpt)
-#     else:
-#         print(f"Warning: Neither {expected_ckpt} nor {source_ckpt} was found. Instantiating model with random weights.")
-
 # 4. Mock classes matching Pupil Labs plugin interfaces
 class MockRoi:
     def __init__(self):
@@ -58,16 +50,34 @@ class MockFrame:
         self.gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
         self.height, self.width = bgr_img.shape[:2]
         self.timestamp = timestamp
-        # self.jpeg_buffer = [0]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Test Detector2DPlugin pupil extraction offline using plugin functions")
     parser.add_argument('--img_path', default="pupil.jpg", required=True, help="Path to input eye image")
     parser.add_argument('--save_path', default="_", help="Path to save visual results")
+    parser.add_argument('--device', default=None, help="Device to use ('cuda', 'cuda:0', 'cpu')")
+    parser.add_argument('--model', default=None, help="Override active model (e.g. 'mambaliteunet', 'pmrnet')")
     return parser.parse_args()
 
 def main():
     args = parse_args()
+
+    # Initialize timestamped CSV log file in logged_latencies folder for this run
+    if "PUPIL_LATENCY_CSV" not in os.environ:
+        root_dir = os.path.abspath(os.path.join(pupil_src_dir, ".."))
+        log_dir = os.path.join(root_dir, "logged_latencies")
+        os.makedirs(log_dir, exist_ok=True)
+        session_time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        os.environ["PUPIL_LATENCY_CSV"] = os.path.join(log_dir, f"latency_{session_time_str}.csv")
+    print(f"Logging latencies to: {os.environ['PUPIL_LATENCY_CSV']}")
+
+    # Determine target compute device
+    if args.device:
+        device = torch.device(args.device)
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    print(f"Using compute device: {device} (CUDA available: {torch.cuda.is_available()})")
 
     # Load image
     if not os.path.exists(args.img_path):
@@ -82,7 +92,17 @@ def main():
     # 5. Instantiate the Plugin
     print("Instantiating Detector2DPlugin...")
     plugin = Detector2DPlugin(g_pool=g_pool)
-    print(f"Selected pupil detection model: {plugin.active_model}")
+
+    if args.model:
+        plugin.active_model = args.model
+
+    # Ensure plugin device and loaded models are explicitly on the compute device
+    plugin.device = device
+    for model_name, model in plugin.models.items():
+        if model is not None:
+            plugin.models[model_name] = model.to(device)
+
+    print(f"Selected pupil detection model: {plugin.active_model} on device: {plugin.device}")
 
     # 6. Perform detection using the plugin's unified detect function
     print("Running detection using plugin.detect...")
