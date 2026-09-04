@@ -289,8 +289,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         else:
             datum = self._detect_nn(frame, **kwargs)
 
+        raw_conf = float(datum.get("raw_confidence", datum.get("confidence", 0.0)))
         if self.conf_graph is not None:
-            self.conf_graph.add(float(datum.get("confidence", 0.0)))
+            self.conf_graph.add(raw_conf)
 
         return datum
 
@@ -304,9 +305,15 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             roi=roi,
         )
 
-        confidence = float(result.get("confidence", 0.0))
-        if confidence < self.confidence_threshold:
+        raw_conf = float(result.get("confidence", 0.0))
+        if np.isnan(raw_conf) or np.isinf(raw_conf):
+            raw_conf = 0.0
+        raw_conf = max(0.0, min(1.0, raw_conf))
+
+        if raw_conf < self.confidence_threshold:
             confidence = 0.0
+        else:
+            confidence = raw_conf
 
         norm_pos = normalize(
             result["location"], (frame.width, frame.height), flip_y=True
@@ -318,6 +325,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             confidence=confidence,
             timestamp=frame.timestamp,
         )
+        datum["raw_confidence"] = raw_conf
         datum["ellipse"] = {
             "axes": result["ellipse"]["axes"],
             "angle": result["ellipse"]["angle"],
@@ -331,13 +339,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         if self.model is None:
             self.model = self._load_model(self.active_model)
             if self.model is None:
-                return self._create_empty_datum(frame.timestamp)
+                return self._create_empty_datum(frame.timestamp, raw_confidence=0.0)
 
         # 1. Extract grayscale image & 2. Preprocess to normalized tensor
         t_prep_start = time.perf_counter()
         gray = self._extract_gray_image(frame)
         if gray is None:
-            return self._create_empty_datum(frame.timestamp)
+            return self._create_empty_datum(frame.timestamp, raw_confidence=0.0)
         tensor = self.get_img(gray).unsqueeze(0).to(self.device)
         t_prep_end = time.perf_counter()
 
@@ -355,8 +363,19 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         pred = torch.argmax(probs, dim=1)[0].cpu().numpy()  # (H, W)
 
         # Class 3 represents the pupil
+        pupil_pixels = (pred == 3)
+        if np.any(pupil_pixels):
+            pupil_probs = probs[0, 3].detach().cpu().numpy()[pupil_pixels]
+            raw_conf = float(np.mean(pupil_probs))
+        else:
+            raw_conf = float(torch.max(probs[0, 3]).detach().cpu().item())
+
+        if np.isnan(raw_conf) or np.isinf(raw_conf):
+            raw_conf = 0.0
+        raw_conf = max(0.0, min(1.0, raw_conf))
+
         pupil_mask = np.zeros_like(pred, dtype=np.uint8)
-        pupil_mask[pred == 3] = 255
+        pupil_mask[pupil_pixels] = 255
 
         # Fit ellipse to pupil contour
         contours, _ = cv2.findContours(
@@ -366,26 +385,18 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         )
 
         if not contours:
-            return self._create_empty_datum(frame.timestamp)
+            return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         best_contour = max(contours, key=cv2.contourArea)
         if len(best_contour) < 5:
-            return self._create_empty_datum(frame.timestamp)
+            return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
 
-        # 6. Mean Softmax Probability over pupil mask
-        pupil_pixels = (pred == 3)
-        if np.any(pupil_pixels):
-            pupil_probs = probs[0, 3].cpu().numpy()[pupil_pixels]
-            mean_conf = float(np.mean(pupil_probs))
-        else:
-            mean_conf = 0.0
-
-        if mean_conf < self.confidence_threshold:
+        if raw_conf < self.confidence_threshold:
             confidence = 0.0
         else:
-            confidence = mean_conf
+            confidence = raw_conf
 
         t_post_end = time.perf_counter()
 
@@ -402,6 +413,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             "location": (float(cx), float(cy)),
             "diameter": float(MA),
             "confidence": float(confidence),
+            "raw_confidence": float(raw_conf),
             "ellipse": {
                 "axes": (float(MA), float(ma)),
                 "angle": float(angle_deg),
@@ -419,6 +431,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             confidence=result["confidence"],
             timestamp=frame.timestamp,
         )
+        datum["raw_confidence"] = result["raw_confidence"]
         datum["ellipse"] = result["ellipse"]
 
         # Attach sub-stage timings and record to waterfall logger
@@ -484,13 +497,14 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         pil_img = PIL.Image.fromarray(img_clahe)
         return self.transform(pil_img)
 
-    def _create_empty_datum(self, timestamp: float) -> Dict:
+    def _create_empty_datum(self, timestamp: float, raw_confidence: float = 0.0) -> Dict:
         datum = self.create_pupil_datum(
             norm_pos=(0.0, 0.0),
             diameter=0.0,
             confidence=0.0,
             timestamp=timestamp,
         )
+        datum["raw_confidence"] = float(raw_confidence)
         datum["ellipse"] = {
             "axes": (0.0, 0.0),
             "angle": 0.0,
@@ -548,7 +562,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         eye_id = getattr(self.g_pool, "eye_id", 0)
         self.conf_graph = graph.Bar_Graph(max_val=1.0)
         self.conf_graph.pos = (140, 50)
-        self.conf_graph.update_rate = 5
+        self.conf_graph.update_rate = 1
         self.conf_graph.label = f"id{eye_id} conf: %0.2f"
 
         self.conf_grad = (
