@@ -91,6 +91,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.ckpt_dir = os.path.join(self.plugin_dir, "model_ckpts")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # Inherit model from g_pool session if available
+        if hasattr(self.g_pool, "pupil_detector_model") and self.g_pool.pupil_detector_model:
+            active_model = self.g_pool.pupil_detector_model
+
         self.latency_log = []
         self.active_model = active_model
         self.confidence_threshold = float(confidence_threshold)
@@ -238,7 +242,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         model.eval()
         logger.info(f"Successfully loaded {model_name_tag} weights from {ckpt_path}")
 
-    def set_active_model(self, model_name: str):
+    def set_active_model(self, model_name: str, broadcast: bool = True):
         """
         Switch active model: Purge previous model from VRAM and load the selected one.
         """
@@ -249,8 +253,23 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self._unload_current_model()
         self.active_model = model_name
 
+        if hasattr(self.g_pool, "pupil_detector_model"):
+            self.g_pool.pupil_detector_model = model_name
+
         if model_name != "2dcpp":
             self.model = self._load_model(model_name)
+
+        if broadcast:
+            self.notify_all({"subject": "pupil_detector.set_model", "model": model_name})
+
+    def on_notify(self, notification):
+        super().on_notify(notification)
+        if notification.get("subject") == "pupil_detector.set_model":
+            model_name = notification.get("model")
+            if model_name in self.model_keys:
+                if model_name != self.active_model or (self.model is None and model_name != "2dcpp"):
+                    logger.info(f"Received model switch notification to '{model_name}'")
+                    self.set_active_model(model_name, broadcast=False)
 
     # -------------------------------------------------------------------------
     # Detection Loop

@@ -109,6 +109,28 @@ def world(
         n = {"subject": "pupil_detector.set_enabled", "value": is_on}
         ipc_pub.notify(n)
 
+    PUPIL_DETECTOR_MODELS = [
+        ("pmrnet", "PMRNet"),
+        ("ritnet", "RITnet (Original)"),
+        ("nn_ritnet", "nnRITnet"),
+        ("nn_unext", "UNeXt"),
+        ("mambaliteunet", "MambaLiteUNet"),
+        ("rollingunet", "RollingUNet"),
+        ("ulvmunet", "UltraLight-VMUNet"),
+        ("ukan", "U-KAN"),
+        ("adgbc", "AD-GBC"),
+        ("2dcpp", "Classic C++ (2D)"),
+    ]
+
+    def detector_model_getter() -> str:
+        return str(getattr(g_pool, "pupil_detector_model", "pmrnet"))
+
+    def detector_model_setter(value: str):
+        g_pool.pupil_detector_model = str(value)
+        n = {"subject": "pupil_detector.set_model", "model": str(value)}
+        ipc_pub.notify(n)
+        logger.info(f"Broadcasted pupil detector model change to: {value}")
+
     try:
         from background_helper import IPC_Logging_Task_Proxy
 
@@ -472,6 +494,9 @@ def world(
         g_pool.pupil_detection_enabled = bool(
             session_settings.get("pupil_detection_enabled", True)
         )
+        g_pool.pupil_detector_model = str(
+            session_settings.get("pupil_detector_model", "pmrnet")
+        )
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
 
@@ -483,6 +508,9 @@ def world(
             subject = noti["subject"]
             if subject == "pupil_detector.set_enabled":
                 g_pool.pupil_detection_enabled = noti["value"]
+            elif subject == "pupil_detector.set_model":
+                g_pool.pupil_detector_model = noti["model"]
+                session_settings["pupil_detector_model"] = noti["model"]
             elif subject == "start_plugin":
                 try:
                     g_pool.plugins.add(
@@ -501,6 +529,10 @@ def world(
                     "value": g_pool.pupil_detection_enabled,
                 }
                 ipc_pub.notify(noti)
+                ipc_pub.notify({
+                    "subject": "pupil_detector.set_model",
+                    "model": getattr(g_pool, "pupil_detector_model", "pmrnet"),
+                })
             elif subject == "set_min_calibration_confidence":
                 g_pool.min_calibration_confidence = noti["value"]
             elif subject.startswith("meta.should_doc"):
@@ -615,6 +647,17 @@ def world(
                 label="Pupil detection",
                 getter=detection_enabled_getter,
                 setter=detection_enabled_setter,
+            )
+        )
+        general_settings.append(
+            ui.Selector(
+                "pupil_detector_model",
+                None,
+                selection=[k for k, _ in PUPIL_DETECTOR_MODELS],
+                labels=[label for _, label in PUPIL_DETECTOR_MODELS],
+                getter=detector_model_getter,
+                setter=detector_model_setter,
+                label="Detector model",
             )
         )
         general_settings.append(
@@ -826,6 +869,9 @@ def world(
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
         session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
+        session_settings["pupil_detector_model"] = getattr(
+            g_pool, "pupil_detector_model", "pmrnet"
+        )
         session_settings["audio_mode"] = audio.get_audio_mode()
 
         if not hide_ui:
