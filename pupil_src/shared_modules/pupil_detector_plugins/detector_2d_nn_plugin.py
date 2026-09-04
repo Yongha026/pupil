@@ -62,13 +62,15 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     memory, freeing resources completely when switching to the C++ detector.
     """
 
+    pupil_detection_identifier = "2d"
+    pupil_detection_method = "2d c++"
+
     uniqueness = "by_class"
     icon_font = "pupil_icons"
     icon_chr = chr(0xEC18)
 
     label = "Neural Network 2D Detector"
-    identifier = "2d"
-    order = 0.9
+    order = 0.100
 
     @property
     def pretty_class_name(self) -> str:
@@ -84,10 +86,11 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         active_model: str = "2dcpp",
         confidence_threshold: float = 0.6,
         show_confidence_graph: bool = True,
-        **properties,
+        properties: Optional[dict] = None,
+        **kwargs,
     ):
         super().__init__(g_pool=g_pool)
-        self.__detector_2d = Detector2D({})
+        self.__detector_2d = Detector2D(properties or {})
         self._stop_other_pupil_detectors()
 
         self.plugin_dir = os.path.dirname(__file__)
@@ -132,10 +135,20 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             return
 
         for plugin in plugin_list:
-            if isinstance(plugin, PupilDetectorPlugin) and plugin is not self:
+            if (
+                isinstance(plugin, PupilDetectorPlugin)
+                and plugin is not self
+                and getattr(plugin, "pupil_detection_identifier", "") == "2d"
+            ):
                 plugin.alive = False
 
         plugin_list.clean()
+
+    def on_resolution_change(self, old_size, new_size):
+        properties = self.pupil_detector.get_properties()
+        properties["pupil_size_max"] *= new_size[0] / old_size[0]
+        properties["pupil_size_min"] *= new_size[0] / old_size[0]
+        self.pupil_detector.update_properties(properties)
 
     # -------------------------------------------------------------------------
     # VRAM & Single Model Management
@@ -659,6 +672,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         d["active_model"] = self.active_model
         d["confidence_threshold"] = self.confidence_threshold
         d["show_confidence_graph"] = self.show_confidence_graph
+        d["properties"] = self.__detector_2d.get_properties()
         return d
 
     def cleanup(self):
