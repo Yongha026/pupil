@@ -79,7 +79,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     def __init__(
         self,
         g_pool=None,
-        active_model: str = "pmrnet",
+        active_model: str = "2dcpp",
         confidence_threshold: float = 0.6,
         **properties,
     ):

@@ -1,0 +1,7 @@
+INFO     world - plugin: Saved 500 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/logged_latencies/latency_2026-09-04_14-03-56.csv                                          plugin.py:307
+[14:10:02] INFO     world - calibration_choreography.base_plugin: Stopping  Calibration                                                                                                             base_plugin.py:652
+open(): 그런 파일이나 디렉터리가 없습니다
+           ERROR    world - gaze_mapping.gazer_base: Calibration Failed!                                                                                                                             gazer_base.py:203
+           ERROR    world - gaze_mapping.gazer_base: Not sufficient pupil data available.                                                                                                            gazer_base.py:297
+           WARNING  world - plugin: Plugin Gazer2D failed to initialize                                                                                                                                  plugin.py:577
+           INFO     eye1 - plugin: Saved 500 latency entries to /home/byeongjun/PycharmProjects/pupil_nnunets/logged_latencies/latency_2026-09-04_14-03-56.csv  
