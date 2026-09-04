@@ -70,7 +70,19 @@ class Plugin:
         import types
         import time
 
-        methods_to_wrap = ["recent_events", "gl_display", "detect"]
+        # Infrastructure plugins that do not process frame/gaze data and pollute logs
+        IGNORED_PLUGINS = {
+            "NDSI_Manager",
+            "HMD_Streaming_Manager",
+            "Log_Display",
+            "Log_History",
+            "File_Manager",
+            "UVC_Manager",
+        }
+        if self.class_name in IGNORED_PLUGINS:
+            return
+
+        methods_to_wrap = ["detect", "recent_events", "gl_display"]
 
         for method_name in methods_to_wrap:
             original_method = getattr(self, method_name, None)
@@ -85,49 +97,63 @@ class Plugin:
             if getattr(original_method, "__wrapped_for_latency__", False) or getattr(original_method.__func__, "__wrapped_for_latency__", False):
                 continue
 
-            def make_wrapper(orig_method, name):
+            def make_wrapper(orig_method, stage_name):
                 def wrapper(inst, *args, **kwargs):
+                    # Skip empty recent_events ticks where zero events occurred
+                    if stage_name == "recent_events" and args:
+                        first_arg = args[0]
+                        if isinstance(first_arg, (list, dict)) and len(first_arg) == 0:
+                            return orig_method(inst, *args, **kwargs)
+
                     t_start = time.perf_counter()
                     res = orig_method(inst, *args, **kwargs)
                     t_end = time.perf_counter()
-                    proc_latency = (t_end - t_start) * 1000
+                    proc_latency_ms = (t_end - t_start) * 1000.0
 
-                    # Resolve the frame/event timestamp
-                    timestamp = None
+                    # Resolve the source frame / event timestamp
+                    frame_ts = None
                     if args:
                         first_arg = args[0]
                         if hasattr(first_arg, "timestamp"):
-                            timestamp = first_arg.timestamp
+                            frame_ts = first_arg.timestamp
                         elif isinstance(first_arg, dict) and "frame" in first_arg:
                             frame = first_arg["frame"]
                             if hasattr(frame, "timestamp"):
-                                timestamp = frame.timestamp
+                                frame_ts = frame.timestamp
                         elif isinstance(first_arg, dict) and "timestamp" in first_arg:
-                            timestamp = first_arg["timestamp"]
+                            frame_ts = first_arg["timestamp"]
                         elif isinstance(first_arg, list) and len(first_arg) > 0:
                             if hasattr(first_arg[0], "timestamp"):
-                                timestamp = first_arg[0].timestamp
+                                frame_ts = first_arg[0].timestamp
                             elif isinstance(first_arg[0], dict) and "timestamp" in first_arg[0]:
-                                timestamp = first_arg[0]["timestamp"]
+                                frame_ts = first_arg[0]["timestamp"]
 
-                    if timestamp is None:
-                        try:
-                            timestamp = inst.g_pool.get_timestamp()
-                        except Exception:
-                            timestamp = time.time()
+                    # Compute accurate cumulative E2E latency using Pupil clock
+                    try:
+                        now_pupil_time = inst.g_pool.get_timestamp()
+                        e2e_latency_ms = (now_pupil_time - frame_ts) * 1000.0 if frame_ts else proc_latency_ms
+                    except Exception:
+                        e2e_latency_ms = proc_latency_ms
 
-                    e2e_latency = (time.time() - timestamp) * 1000 if timestamp else 0.0
-
-                    method_label = inst.class_name # Log with plugin name
+                    process_name = getattr(inst.g_pool, "process", getattr(inst.g_pool, "name", "unknown"))
+                    model_tag = getattr(inst, "active_model", inst.class_name)
 
                     inst.latency_log.append({
-                        "plugin": method_label,
-                        "timestamp": timestamp,
-                        "processing_latency_ms": proc_latency,
-                        "e2e_latency_ms": e2e_latency,
+                        "process": process_name,
+                        "plugin": inst.class_name,
+                        "model": model_tag,
+                        "stage": stage_name,
+                        "frame_timestamp": frame_ts or 0.0,
+                        "processing_latency_ms": proc_latency_ms,
+                        "e2e_latency_ms": e2e_latency_ms,
                         "t_start": t_start,
                         "t_end": t_end,
                     })
+
+                    # Periodically flush in long capture runs
+                    if len(inst.latency_log) >= 500:
+                        inst._flush_latency_log_to_file()
+
                     return res
                 return wrapper
 
@@ -242,38 +268,47 @@ class Plugin:
         """
         pass
 
+    def _flush_latency_log_to_file(self):
+        if not getattr(self, "latency_log", None):
+            return
+        import csv
+        log_path = os.environ.get("PUPIL_LATENCY_CSV", None)
+        if not log_path:
+            log_path = os.path.join(os.path.dirname(__file__), "..", "..", "latency_logs.csv")
+            if not os.path.isdir(os.path.dirname(log_path)):
+                log_path = "latency_logs.csv"
+        try:
+            file_exists = os.path.exists(log_path)
+            with open(log_path, "a", newline="") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "process",
+                        "plugin",
+                        "model",
+                        "stage",
+                        "frame_timestamp",
+                        "processing_latency_ms",
+                        "e2e_latency_ms",
+                        "t_start",
+                        "t_end",
+                    ],
+                )
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerows(self.latency_log)
+            logger.info(f"Saved {len(self.latency_log)} latency entries to {log_path}")
+            self.latency_log.clear()
+        except Exception as e:
+            logger.error(f"Failed to save latency log: {e}")
+
     def cleanup(self):
         """
         gets called when the plugin get terminated.
         This happens either voluntarily or forced.
         if you have an gui or glfw window destroy it here.
         """
-        if getattr(self, "latency_log", None):
-            import csv
-            log_path = os.path.join(os.path.dirname(__file__), "..", "..", "latency_logs.csv")
-            if not os.path.isdir(os.path.dirname(log_path)):
-                log_path = "latency_logs.csv"
-            try:
-                file_exists = os.path.exists(log_path)
-                with open(log_path, "a", newline="") as f:
-                    writer = csv.DictWriter(
-                        f,
-                        fieldnames=[
-                            "plugin",
-                            "timestamp",
-                            "processing_latency_ms",
-                            "e2e_latency_ms",
-                            "t_start",
-                            "t_end",
-                        ],
-                    )
-                    if not file_exists:
-                        writer.writeheader()
-                    writer.writerows(self.latency_log)
-                logger.info(f"Saved {len(self.latency_log)} latency entries to {log_path}")
-                self.latency_log.clear()
-            except Exception as e:
-                logger.error(f"Failed to save latency log: {e}")
+        self._flush_latency_log_to_file()
 
     # ------- do not change methods, properties below this line in your derived class
 
@@ -589,33 +624,9 @@ class Plugin_List:
                 ):
                     p.deinit_ui()
                 p.cleanup()
-                # Fallback log saving to root in case super().cleanup() was not called
-                if getattr(p, "latency_log", None):
-                    import csv
-                    log_path = os.path.join(os.path.dirname(__file__), "..", "..", "latency_logs.csv")
-                    if not os.path.isdir(os.path.dirname(log_path)):
-                        log_path = "latency_logs.csv"
-                    try:
-                        file_exists = os.path.exists(log_path)
-                        with open(log_path, "a", newline="") as f:
-                            writer = csv.DictWriter(
-                                f,
-                                fieldnames=[
-                                    "plugin",
-                                    "timestamp",
-                                    "processing_latency_ms",
-                                    "e2e_latency_ms",
-                                    "t_start",
-                                    "t_end",
-                                ],
-                            )
-                            if not file_exists:
-                                writer.writeheader()
-                            writer.writerows(p.latency_log)
-                        logger.info(f"Saved {len(p.latency_log)} latency entries to {log_path} (fallback)")
-                        p.latency_log.clear()
-                    except Exception as e:
-                        logger.error(f"Failed to save fallback latency log: {e}")
+                # Fallback log saving in case super().cleanup() was not called
+                if hasattr(p, "_flush_latency_log_to_file"):
+                    p._flush_latency_log_to_file()
 
                 logger.info(
                     f"Plugin {p.class_name} cleaned up at timestamp: {self.g_pool.get_timestamp()}"

@@ -256,34 +256,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     # Detection Loop
     # -------------------------------------------------------------------------
     def detect(self, frame, **kwargs) -> Dict:
-        t_start = time.time()
-
         if self.active_model == "2dcpp":
-            datum = self._detect_2dcpp(frame, **kwargs)
+            return self._detect_2dcpp(frame, **kwargs)
         else:
-            datum = self._detect_nn(frame, **kwargs)
-
-        t_end = time.time()
-        processing_latency_ms = (t_end - t_start) * 1000.0
-        e2e_latency_ms = (t_end - frame.timestamp) * 1000.0
-
-        # Log timestamp and latency for full pipeline latency profiling
-        self.latency_log.append(
-            {
-                "plugin": self.active_model,
-                "timestamp": frame.timestamp,
-                "processing_latency_ms": processing_latency_ms,
-                "e2e_latency_ms": e2e_latency_ms,
-                "t_start": t_start,
-                "t_end": t_end,
-            }
-        )
-
-        # Periodically flush to file to prevent unbounded memory growth in long sessions
-        if len(self.latency_log) >= 500:
-            self.flush_latency_log()
-
-        return datum
+            return self._detect_nn(frame, **kwargs)
 
     def _detect_2dcpp(self, frame, **kwargs) -> Dict:
         roi = Roi(*self.g_pool.roi.bounds)
@@ -486,38 +462,6 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         d["confidence_threshold"] = self.confidence_threshold
         return d
 
-    def flush_latency_log(self):
-        if not self.latency_log:
-            return
-
-        log_path = os.path.join(
-            os.path.dirname(__file__), "..", "..", "latency_logs.csv"
-        )
-        if not os.path.isdir(os.path.dirname(log_path)):
-            log_path = "latency_logs.csv"
-
-        try:
-            file_exists = os.path.exists(log_path)
-            with open(log_path, "a", newline="") as f:
-                writer = csv.DictWriter(
-                    f,
-                    fieldnames=[
-                        "plugin",
-                        "timestamp",
-                        "processing_latency_ms",
-                        "e2e_latency_ms",
-                        "t_start",
-                        "t_end",
-                    ],
-                )
-                if not file_exists:
-                    writer.writeheader()
-                writer.writerows(self.latency_log)
-            self.latency_log.clear()
-        except Exception as e:
-            logger.error(f"Error flushing latency log to {log_path}: {e}")
-
     def cleanup(self):
-        self.flush_latency_log()
         self._unload_current_model()
         super().cleanup()
