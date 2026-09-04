@@ -25,7 +25,7 @@ VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
 class Exposure_Time:
-    def __init__(self, max_ET, frame_rate, mode="manual"):
+    def __init__(self, max_ET, frame_rate, mode="auto"):
         self.mode = mode
         self.ET_thres = 1, min(10000 / frame_rate, max_ET)
         self.last_ET = self.ET_thres[1]
