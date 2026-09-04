@@ -55,8 +55,6 @@ deployment/dist/
 win_drv
 .vs
 .venv*
-*.csv
-!latency_logs.csv
 *.jpg
 
 # pyenv local config

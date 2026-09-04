@@ -40,7 +40,7 @@ def available_detector_plugins() -> T.List[T.Type[PupilDetectorPlugin]]:
     Returns list of all detectors.
     """
 
-    all_plugins: T.List[T.Type[PupilDetectorPlugin]] = [Detector2DPlugin]
+    all_plugins: T.List[T.Type[PupilDetectorPlugin]] = [nnUNetDetector2DPlugin]
 
     try:
         from .pye3d_plugin import Pye3DPlugin
