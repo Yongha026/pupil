@@ -246,7 +246,9 @@ def world(...):
 
 
 # 6. pye3d Pupil Detection
-**Model-based approach** - 3D eye model으로 gaze direction estimation.  
+**Model-based approach** - 3D eye model으로 **Ocular kinematics, optics**  
+> 그러면 Gazer는 2D 동공 Seg + 3D eye model 받아서 3D gaze vector생성하는건가?  
+
 헤드셋 slippage(움직임) 있을 수 있으니 eyeball position은 고정된 값 쓰면 X.  
 최근 값 $\Rightarrow$ 헤드셋 움직 때문.  
 이전 값 $\Rightarrow$ 동공 위치 estimation이 충분한 accuracy 가지기 위한 데이터.  

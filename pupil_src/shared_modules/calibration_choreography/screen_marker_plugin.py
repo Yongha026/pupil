@@ -242,6 +242,8 @@ class ScreenMarkerChoreographyPlugin(
 
         # Always save pupil positions
         self.pupil_list.extend(events["pupil"])
+        if "gaze" in events and events["gaze"]:
+            self.gaze_list.extend(events["gaze"])
 
         # Detect reference circle marker
         detected_marker = self.__detect_reference_circle_marker(frame.gray)

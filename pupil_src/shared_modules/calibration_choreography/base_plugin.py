@@ -291,16 +291,13 @@ class CalibrationChoreographyPlugin(Plugin):
         if ui_button:
             ui_button.status_text = value
 
-    # -- Plugin Functions
+    @property
+    def gaze_list(self) -> T.List[dict]:
+        return getattr(self, "_CalibrationChoreographyPlugin__gaze_list", [])
 
-    def on_notify(self, notification):
-        if notification.get("subject") == "calibration.set_enabled":
-            val = bool(notification.get("enabled", True))
-            if hasattr(self, "g_pool") and self.g_pool is not None:
-                self.g_pool.enable_calibration = val
-                gazer = getattr(self.g_pool, "active_gaze_mapping_plugin", None)
-                if gazer is not None:
-                    gazer.enable_calibration = val
+    @gaze_list.setter
+    def gaze_list(self, value):
+        self.__gaze_list = value
 
     @property
     def pupil_list(self) -> T.List[dict]:
@@ -334,7 +331,7 @@ class CalibrationChoreographyPlugin(Plugin):
         )
 
     def on_choreography_successfull(
-        self, mode: ChoreographyMode, pupil_list: list, ref_list: list
+        self, mode: ChoreographyMode, pupil_list: list, ref_list: list, gaze_list: list = None
     ):
         if mode == ChoreographyMode.CALIBRATION:
             curr_calib = getattr(self.g_pool, "calibration_counter", 0) + 1
@@ -357,12 +354,18 @@ class CalibrationChoreographyPlugin(Plugin):
             }
             self._start_plugin(self.selected_gazer_class, calib_data=calib_data)
         elif mode == ChoreographyMode.VALIDATION:
-            assert self.g_pool.active_gaze_mapping_plugin is not None
-            gazer_class = self.g_pool.active_gaze_mapping_plugin.__class__
-            gazer_params = dict(self.g_pool.active_gaze_mapping_plugin.get_params())
+            if self.g_pool.active_gaze_mapping_plugin is not None and self.enable_calibration:
+                gazer_class = self.g_pool.active_gaze_mapping_plugin.__class__
+                gazer_params = dict(self.g_pool.active_gaze_mapping_plugin.get_params())
+            else:
+                from gaze_mapping import default_gazer_class
+                gazer_class = default_gazer_class
+                dummy_gazer = default_gazer_class(self.g_pool, params={}, register_as_active=False)
+                gazer_params = dict(dummy_gazer.get_params())
+
             gazer_params["enable_calibration"] = self.enable_calibration
 
-            curr_calib = getattr(self.g_pool, "calibration_counter", 1 if self.enable_calibration else 0)
+            curr_calib = getattr(self.g_pool, "calibration_counter", 1) if self.enable_calibration else 0
             val_round = getattr(self.g_pool, "validation_counter_under_current_calib", 0) + 1
             total_val = getattr(self.g_pool, "total_validation_counter", 0) + 1
             self.g_pool.validation_counter_under_current_calib = val_round
@@ -394,18 +397,19 @@ class CalibrationChoreographyPlugin(Plugin):
             )
             if acc_vis_inst is None:
                 self._start_plugin("Accuracy_Visualizer")
-            self.notify_all(
-                ChoreographyNotification(
-                    mode=ChoreographyMode.VALIDATION,
-                    action=ChoreographyAction.DATA,
-                    gazer_class_name=gazer_class.__name__,
-                    gazer_params=gazer_params,
-                    pupil_list=pupil_list,
-                    ref_list=ref_list,
-                    timestamp=self.g_pool.get_timestamp(),
-                    record=True,
-                ).to_dict()
-            )
+            notification_dict = ChoreographyNotification(
+                mode=ChoreographyMode.VALIDATION,
+                action=ChoreographyAction.DATA,
+                gazer_class_name=gazer_class.__name__,
+                gazer_params=gazer_params,
+                pupil_list=pupil_list,
+                ref_list=ref_list,
+                timestamp=self.g_pool.get_timestamp(),
+                record=True,
+            ).to_dict()
+            if gaze_list:
+                notification_dict["gaze_list"] = gaze_list
+            self.notify_all(notification_dict)
         else:
             raise UnsupportedChoreographyModeError(mode)
 
@@ -562,6 +566,15 @@ class CalibrationChoreographyPlugin(Plugin):
         Args:
             note_dict (dict): Notification dictionary
         """
+        if isinstance(note_dict, dict) and note_dict.get("subject") == "calibration.set_enabled":
+            val = bool(note_dict.get("enabled", True))
+            if hasattr(self, "g_pool") and self.g_pool is not None:
+                self.g_pool.enable_calibration = val
+                gazer = getattr(self.g_pool, "active_gaze_mapping_plugin", None)
+                if gazer is not None:
+                    gazer.enable_calibration = val
+            return
+
         try:
             note = ChoreographyNotification.from_dict(note_dict)
         except ValueError:
@@ -620,6 +633,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__is_active = True
         self.__ref_list = []
         self.__pupil_list = []
+        self.__gaze_list = []
 
         ### Set the calibration choreography UI
 
@@ -648,6 +662,7 @@ class CalibrationChoreographyPlugin(Plugin):
         current_mode = self.__current_mode
         pupil_list = self.__pupil_list
         ref_list = self.__ref_list
+        gaze_list = getattr(self, "_CalibrationChoreographyPlugin__gaze_list", [])
 
         logger.info(f"Stopping  {current_mode.label}")
         audio.tink()
@@ -657,6 +672,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.__is_active = False
         self.__ref_list = []
         self.__pupil_list = []
+        self.__gaze_list = []
 
         ### Set the calibration choreography UI
 
@@ -671,7 +687,7 @@ class CalibrationChoreographyPlugin(Plugin):
         self.on_choreography_stopped(mode=current_mode)
 
         self.on_choreography_successfull(
-            mode=current_mode, pupil_list=pupil_list, ref_list=ref_list
+            mode=current_mode, pupil_list=pupil_list, ref_list=ref_list, gaze_list=gaze_list
         )
 
     def _start_plugin(self, plugin_cls_or_name, **kwargs):

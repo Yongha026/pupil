@@ -384,6 +384,11 @@ class Gazer3D(GazerBase):
         self.left_model.binocular_model = self.binocular_model
         self.right_model.binocular_model = self.binocular_model
 
+    def set_params(self, params):
+        super().set_params(params)
+        self.left_model.binocular_model = self.binocular_model
+        self.right_model.binocular_model = self.binocular_model
+
     def _extract_pupil_features(self, pupil_data) -> np.ndarray:
         pupil_features = np.array(
             [

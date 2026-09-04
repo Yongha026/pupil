@@ -184,7 +184,13 @@ class GazerBase(abc.ABC, Plugin):
         return GazerBase
 
     def __init__(
-        self, g_pool, *, calib_data=None, params=None, raise_calibration_error=False
+        self,
+        g_pool,
+        *,
+        calib_data=None,
+        params=None,
+        raise_calibration_error=False,
+        register_as_active=True,
     ):
         super().__init__(g_pool)
         if None not in (calib_data, params):
@@ -224,7 +230,7 @@ class GazerBase(abc.ABC, Plugin):
         else:
             raise ValueError("Requires either `calib_data` or `params`")
 
-        if self.alive:
+        if self.alive and register_as_active:
             # Used by pupil_data_relay for gaze mapping.
             g_pool.active_gaze_mapping_plugin = self
 

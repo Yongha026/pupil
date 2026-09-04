@@ -127,9 +127,17 @@ class ValidationInput:
         self.__ref_list = None
         self.__gazer_class = None
         self.__gazer_params = None
+        self.gaze_list = None
+        self.is_calibration = True
 
     def update(
-        self, gazer_class_name: str, gazer_params=..., pupil_list=..., ref_list=...
+        self,
+        gazer_class_name: str,
+        gazer_params=...,
+        pupil_list=...,
+        ref_list=...,
+        gaze_list=None,
+        is_calibration=...,
     ):
         if (
             self.gazer_class_name is not None
@@ -151,6 +159,12 @@ class ValidationInput:
 
         if ref_list is not ...:
             self.__ref_list = ref_list
+
+        if gaze_list is not None:
+            self.gaze_list = gaze_list
+
+        if is_calibration is not ...:
+            self.is_calibration = is_calibration
 
     @staticmethod
     def __gazer_class_from_name(gazer_class_name: str) -> T.Optional[T.Any]:
@@ -344,6 +358,7 @@ class Accuracy_Visualizer(Plugin):
         self.recent_input.update(
             gazer_class_name=note.gazer_class_name,
             gazer_params=note.params,
+            is_calibration=True,
         )
 
         self.recalculate()
@@ -363,6 +378,8 @@ class Accuracy_Visualizer(Plugin):
             gazer_params=note_dict["gazer_params"],
             pupil_list=note_dict["pupil_list"],
             ref_list=note_dict["ref_list"],
+            gaze_list=note_dict.get("gaze_list"),
+            is_calibration=False,
         )
 
         self.recalculate()
@@ -386,6 +403,7 @@ class Accuracy_Visualizer(Plugin):
             intrinsics=self.g_pool.capture.intrinsics,
             outlier_threshold=self.outlier_threshold,
             succession_threshold=self.succession_threshold,
+            gaze_list=getattr(self.recent_input, "gaze_list", None),
         )
 
         if not results.is_valid:
@@ -411,15 +429,16 @@ class Accuracy_Visualizer(Plugin):
             logger.info(f"Angular precision: {results.precision.result:.3f} degrees")
 
         self.error_lines = results.error_lines
-        ref_locations = results.correlation.norm_space[1::2, :]
-        if len(ref_locations) >= 3:
-            try:
-                # requires at least 3 points
-                hull = scipy.spatial.ConvexHull(ref_locations)
-                self.calibration_area = hull.points[hull.vertices, :]
-            except scipy.spatial.qhull.QhullError:
-                logger.warning("Calibration area could not be calculated")
-                logger.debug(traceback.format_exc())
+        if getattr(self.recent_input, "is_calibration", True):
+            ref_locations = results.correlation.norm_space[1::2, :]
+            if len(ref_locations) >= 3:
+                try:
+                    # requires at least 3 points
+                    hull = scipy.spatial.ConvexHull(ref_locations)
+                    self.calibration_area = hull.points[hull.vertices, :]
+                except scipy.spatial.qhull.QhullError:
+                    logger.warning("Calibration area could not be calculated")
+                    logger.debug(traceback.format_exc())
 
     @staticmethod
     def calc_acc_prec_errlines(
@@ -431,10 +450,13 @@ class Accuracy_Visualizer(Plugin):
         intrinsics,
         outlier_threshold,
         succession_threshold=np.cos(np.deg2rad(0.5)),
+        gaze_list=None,
     ) -> AccuracyPrecisionResult:
-        gazer = gazer_class(g_pool, params=gazer_params)
-
-        gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
+        if gaze_list:
+            gaze_pos = gaze_list
+        else:
+            gazer = gazer_class(g_pool, params=gazer_params, register_as_active=False)
+            gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
         ref_pos = ref_list
 
         try:
@@ -467,7 +489,10 @@ class Accuracy_Visualizer(Plugin):
         error_lines = error_lines[selected_indices].reshape(
             -1, 2
         )  # shape: num_used x 2
-        accuracy = np.rad2deg(np.arccos(selected_samples.clip(-1.0, 1.0).mean()))
+        if num_used > 0:
+            accuracy = np.rad2deg(np.arccos(selected_samples.clip(-1.0, 1.0).mean()))
+        else:
+            accuracy = float("nan")
         accuracy_result = CalculationResult(accuracy, num_used, num_total)
 
         # lets calculate precision:  (RMS of distance of succesive samples.)
@@ -496,9 +521,12 @@ class Accuracy_Visualizer(Plugin):
             succesive_distances.shape[0],
             succesive_distances_gaze.shape[0],
         )
-        precision = np.sqrt(
-            np.mean(np.rad2deg(np.arccos(succesive_distances.clip(-1.0, 1.0))) ** 2)
-        )
+        if num_used > 0:
+            precision = np.sqrt(
+                np.mean(np.rad2deg(np.arccos(succesive_distances.clip(-1.0, 1.0))) ** 2)
+            )
+        else:
+            precision = float("nan")
         precision_result = CalculationResult(precision, num_used, num_total)
 
         return AccuracyPrecisionResult(
