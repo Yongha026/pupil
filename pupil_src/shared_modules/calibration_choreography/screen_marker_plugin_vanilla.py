@@ -68,53 +68,16 @@ class ScreenMarkerChoreographyPlugin(
     def selection_order(cls) -> float:
         return 1.0
 
-    # Diversified Calibration Patterns (5-Point Vanilla, 9-Point Grid, 12-Point Dense)
-    CALIBRATION_PATTERNS = {
-        "5-Point (Pupil Labs Default)": [
-            (0.5, 0.5),  # Center
-            (0.0, 1.0),  # Top-Left
-            (1.0, 1.0),  # Top-Right
-            (1.0, 0.0),  # Bottom-Right
-            (0.0, 0.0),  # Bottom-Left
-        ],
-        "9-Point (3x3 Grid / Ours)": [
-            (0.0, 1.0), (0.5, 1.0), (1.0, 1.0),  # Top row (1, 2, 3)
-            (0.0, 0.5), (0.5, 0.5), (1.0, 0.5),  # Middle row (4, 5, 6)
-            (0.0, 0.0), (0.5, 0.0), (1.0, 0.0),  # Bottom row (7, 8, 9)
-        ],
-        "12-Point (4x3 Dense Grid / New)": [
-            (0.0, 1.0), (0.333, 1.0), (0.667, 1.0), (1.0, 1.0),  # Top row
-            (0.0, 0.5), (0.333, 0.5), (0.667, 0.5), (1.0, 0.5),  # Middle row
-            (0.0, 0.0), (0.333, 0.0), (0.667, 0.0), (1.0, 0.0),  # Bottom row
-        ],
-    }
-
-    # Selectable Validation Patterns (Diamond Inward Cross vs 4 Extreme Corners)
-    VALIDATION_PATTERNS = {
-        "Diamond (Inward Cross / Default)": [
-            (0.5, 0.8),  # Top (20% margin from edge)
-            (0.8, 0.5),  # Right (20% margin from edge)
-            (0.5, 0.2),  # Bottom (20% margin from edge)
-            (0.2, 0.5),  # Left (20% margin from edge)
-        ],
-        "4 Corners (Extreme Boundaries)": [
-            (0.0, 1.0),  # Top-Left corner
-            (1.0, 1.0),  # Top-Right corner
-            (1.0, 0.0),  # Bottom-Right corner
-            (0.0, 0.0),  # Bottom-Left corner
-        ],
-    }
-
-    # Backward-compatible alias
-    DEFAULT_VALIDATION_TARGETS = VALIDATION_PATTERNS["Diamond (Inward Cross / Default)"]
-
-    def get_list_of_markers_to_show(self, mode: ChoreographyMode) -> list:
+    @staticmethod
+    def get_list_of_markers_to_show(mode: ChoreographyMode) -> list:
         if ChoreographyMode.CALIBRATION == mode:
-            pattern = getattr(self, "calibration_pattern", "12-Point (4x3 Dense Grid / New)")
-            return list(self.CALIBRATION_PATTERNS.get(pattern, self.CALIBRATION_PATTERNS["12-Point (4x3 Dense Grid / New)"]))
+            return [(0.5, 0.5), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+            # return [(0.5, 0.5), (0.5, 1.0), (1.0, 0.5), (0.5, 0.0), (0.0, 0.5)]
         if ChoreographyMode.VALIDATION == mode:
-            pattern = getattr(self, "validation_pattern", "Diamond (Inward Cross / Default)")
-            return list(self.VALIDATION_PATTERNS.get(pattern, self.VALIDATION_PATTERNS["Diamond (Inward Cross / Default)"]))
+            # return [(0.5, 1.0), (1.0, 0.5), (0.5, 0.0), (0.0, 0.5)]
+            #return [(0.5, 0.8), (0.8, 0.5), (0.5, 0.2), (0.2, 0.5), (0.5, 0.5)]
+            # return [(0.2, 0.8), (0.8, 0.8), (0.8, 0.2), (0.2, 0.2)]
+            return [(0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
         raise ValueError(f"Unknown mode {mode}")
 
     def __init__(
@@ -122,10 +85,8 @@ class ScreenMarkerChoreographyPlugin(
         g_pool,
         fullscreen=True,
         marker_scale=1.0,
-        sample_duration=60,
+        sample_duration=40,
         monitor_name=None,
-        calibration_pattern="12-Point (4x3 Dense Grid / New)",
-        validation_pattern="Diamond (Inward Cross / Default)",
         **kwargs,
     ):
         super().__init__(g_pool, **kwargs)
@@ -134,8 +95,6 @@ class ScreenMarkerChoreographyPlugin(
         self.selected_monitor_name = monitor_name
         self.is_fullscreen = fullscreen
         self.sample_duration = sample_duration
-        self.calibration_pattern = calibration_pattern
-        self.validation_pattern = validation_pattern
 
         # Private properties
         self.__current_list_of_markers_to_show = []
@@ -154,9 +113,6 @@ class ScreenMarkerChoreographyPlugin(
         d["fullscreen"] = self.is_fullscreen
         d["marker_scale"] = self.__marker_window.marker_scale
         d["monitor_name"] = self.selected_monitor_name
-        d["sample_duration"] = self.sample_duration
-        d["calibration_pattern"] = self.calibration_pattern
-        d["validation_pattern"] = self.validation_pattern
         return d
 
     ### Public - Plugin
@@ -166,20 +122,6 @@ class ScreenMarkerChoreographyPlugin(
         return "Calibrate gaze parameters using a screen based animation."
 
     def _init_custom_menu_ui_elements(self) -> list:
-        self.__ui_selector_pattern = ui.Selector(
-            "calibration_pattern",
-            self,
-            label="Calibration Pattern",
-            selection=list(self.CALIBRATION_PATTERNS.keys()),
-        )
-
-        self.__ui_selector_validation_pattern = ui.Selector(
-            "validation_pattern",
-            self,
-            label="Validation Pattern",
-            selection=list(self.VALIDATION_PATTERNS.keys()),
-        )
-
         self.__ui_selector_monitor_name = ui.Selector(
             "selected_monitor_name",
             self,
@@ -206,8 +148,6 @@ class ScreenMarkerChoreographyPlugin(
         )
 
         return [
-            self.__ui_selector_pattern,
-            self.__ui_selector_validation_pattern,
             self.__ui_selector_monitor_name,
             self.__ui_switch_is_fullscreen,
             self.__ui_slider_marker_scale,
