@@ -4,8 +4,9 @@ import logging
 import os
 import time
 from typing import Dict, List, Optional, Tuple
-
 import cv2
+import gl_utils
+import glfw
 import numpy as np
 import PIL.Image
 import torch
@@ -13,7 +14,8 @@ import torchvision
 
 from methods import normalize
 from pupil_detectors import Detector2D, DetectorBase, Roi
-from pyglui import ui
+from pyglui import graph, ui
+from pyglui.cygl.utils import RGBA, mix_smooth
 
 from pupil_detector_plugins import (
     adgbc,
@@ -81,6 +83,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         g_pool=None,
         active_model: str = "2dcpp",
         confidence_threshold: float = 0.6,
+        show_confidence_graph: bool = True,
         **properties,
     ):
         super().__init__(g_pool=g_pool)
@@ -98,6 +101,12 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.latency_log = []
         self.active_model = active_model
         self.confidence_threshold = float(confidence_threshold)
+        self.show_confidence_graph = bool(show_confidence_graph)
+        self.conf_graph = None
+        self.conf_grad = None
+        self.conf_grad_limits = (0.0, 1.0)
+        self._last_fb_size = None
+        self._last_content_scale = None
         self.model = None
 
         self.model_keys = [k for k, _ in AVAILABLE_MODELS]
@@ -276,9 +285,14 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     # -------------------------------------------------------------------------
     def detect(self, frame, **kwargs) -> Dict:
         if self.active_model == "2dcpp":
-            return self._detect_2dcpp(frame, **kwargs)
+            datum = self._detect_2dcpp(frame, **kwargs)
         else:
-            return self._detect_nn(frame, **kwargs)
+            datum = self._detect_nn(frame, **kwargs)
+
+        if self.conf_graph is not None:
+            self.conf_graph.add(float(datum.get("confidence", 0.0)))
+
+        return datum
 
     def _detect_2dcpp(self, frame, **kwargs) -> Dict:
         roi = Roi(*self.g_pool.roi.bounds)
@@ -522,12 +536,82 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_2D.as_float, "2D pupil ellipse")
         )
 
+        self.menu.append(
+            ui.Switch(
+                "show_confidence_graph",
+                self,
+                label="Show Confidence Graph",
+            )
+        )
+
+        # Set up confidence performance graph (matching system_graphs.py)
+        eye_id = getattr(self.g_pool, "eye_id", 0)
+        self.conf_graph = graph.Bar_Graph(max_val=1.0)
+        self.conf_graph.pos = (140, 50)
+        self.conf_graph.update_rate = 5
+        self.conf_graph.label = f"id{eye_id} conf: %0.2f"
+
+        self.conf_grad = (
+            RGBA(1.0, 0.0, 0.0, self.conf_graph.color[3]),
+            self.conf_graph.color,
+        )
+
+        if hasattr(self.g_pool, "graphs") and isinstance(self.g_pool.graphs, list):
+            if self.conf_graph not in self.g_pool.graphs:
+                self.g_pool.graphs.append(self.conf_graph)
+
+        if hasattr(self.g_pool, "main_window") and self.g_pool.main_window:
+            self.on_window_resize(self.g_pool.main_window)
+
+    def on_window_resize(self, window, *args):
+        if self.conf_graph is not None and window is not None:
+            try:
+                fb_size = glfw.get_framebuffer_size(window)
+                content_scale = gl_utils.get_content_scale(window)
+                self.conf_graph.scale = content_scale
+                self.conf_graph.adjust_window_size(*fb_size)
+                self._last_fb_size = fb_size
+                self._last_content_scale = content_scale
+            except Exception as e:
+                logger.debug(f"Failed to adjust confidence graph size on resize: {e}")
+
+    def deinit_ui(self):
+        if hasattr(self.g_pool, "graphs") and isinstance(self.g_pool.graphs, list):
+            if self.conf_graph in self.g_pool.graphs:
+                self.g_pool.graphs.remove(self.conf_graph)
+        self.conf_graph = None
+        self.conf_grad = None
+        super().deinit_ui()
+
     def gl_display(self):
         if self._recent_detection_result:
             draw_pupil_outline(
                 self._recent_detection_result,
                 color_rgb=color_scheme.PUPIL_ELLIPSE_2D.as_float,
             )
+
+        if self.show_confidence_graph and self.conf_graph is not None:
+            if hasattr(self.g_pool, "main_window") and self.g_pool.main_window:
+                try:
+                    fb_size = glfw.get_framebuffer_size(self.g_pool.main_window)
+                    content_scale = gl_utils.get_content_scale(self.g_pool.main_window)
+                    if fb_size != self._last_fb_size or content_scale != self._last_content_scale:
+                        self.conf_graph.scale = content_scale
+                        self.conf_graph.adjust_window_size(*fb_size)
+                        self._last_fb_size = fb_size
+                        self._last_content_scale = content_scale
+                except Exception:
+                    pass
+
+            if self.conf_grad is not None:
+                self.conf_graph.color = mix_smooth(
+                    self.conf_grad[0],
+                    self.conf_grad[1],
+                    self.conf_graph.avg,
+                    self.conf_grad_limits[0],
+                    self.conf_grad_limits[1],
+                )
+            self.conf_graph.draw()
 
     # -------------------------------------------------------------------------
     # Persistence & Cleanup
@@ -536,8 +620,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         d = super().get_init_dict()
         d["active_model"] = self.active_model
         d["confidence_threshold"] = self.confidence_threshold
+        d["show_confidence_graph"] = self.show_confidence_graph
         return d
 
     def cleanup(self):
         self._unload_current_model()
+        if hasattr(self.g_pool, "graphs") and isinstance(self.g_pool.graphs, list):
+            if self.conf_graph in self.g_pool.graphs:
+                self.g_pool.graphs.remove(self.conf_graph)
+        self.conf_graph = None
         super().cleanup()

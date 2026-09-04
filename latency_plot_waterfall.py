@@ -366,7 +366,7 @@ def main():
         render_waterfall_panel(
             ax2,
             steady_state,
-            title="Steady-State Looping System Latency (Reflex Style)",
+            title="Steady-State Looping System Latency",
             bar_color="#76b900",
             edge_color="#9be600",
         )
@@ -388,7 +388,7 @@ def main():
         render_waterfall_panel(
             ax,
             steady_state,
-            title="Pupil Labs End-to-End System Latency Breakdown (Reflex Style)",
+            title="Pupil Labs End-to-End System Latency Breakdown",
             bar_color="#76b900",
             edge_color="#9be600",
         )
