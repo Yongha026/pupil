@@ -62,14 +62,30 @@ def load_and_clean_data(csv_path: str) -> pd.DataFrame:
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
     df = pd.read_csv(csv_path)
-    expected_cols = {"process", "plugin", "stage", "processing_latency_ms", "t_start", "t_end"}
+    expected_cols = {"process", "plugin", "processing_latency_ms", "t_start", "t_end"}
     missing = expected_cols - set(df.columns)
     if missing:
         raise ValueError(f"CSV missing expected columns: {missing}")
 
-    for col in ["processing_latency_ms", "e2e_latency_ms", "t_start", "t_end", "frame_timestamp"]:
+    for col in [
+        "processing_latency_ms",
+        "std_latency_ms",
+        "min_latency_ms",
+        "max_latency_ms",
+        "p95_latency_ms",
+        "e2e_latency_ms",
+        "sample_count",
+        "t_start",
+        "t_end",
+        "frame_timestamp",
+    ]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if "stage" not in df.columns:
+        df["stage"] = df.get("phase", "loop")
+    if "phase" not in df.columns:
+        df["phase"] = "loop"
 
     if "model" not in df.columns:
         df["model"] = "unknown"
@@ -102,29 +118,49 @@ def extract_cycle_statistics(df: pd.DataFrame, metric: str = "processing_latency
 
         model_name = group_sorted.iloc[0].get("model", "unknown")
 
-        # 1. Initial Booting: exactly the first raw occurrence
-        boot_row = group_sorted.iloc[0]
-        boot_val = float(boot_row[metric])
-        detailed_records.append({
-            "process": proc,
-            "plugin": plugin,
-            "model": model_name,
-            "stage": stage,
-            "phase": "Initial Booting",
-            "val_type": "Raw Datum",
-            "latency": boot_val,
-            "std": 0.0,
-            "p95": boot_val,
-            "count": 1,
-            "t_start": boot_row["t_start"],
-        })
+        # Check if phase column explicitly identifies boot vs loop
+        has_phase_boot = "boot" in group_sorted["phase"].values
 
-        # 2. Looping Data: all subsequent occurrences
-        if len(group_sorted) > 1:
+        if has_phase_boot:
+            boot_group = group_sorted[group_sorted["phase"] == "boot"]
+            loop_group = group_sorted[group_sorted["phase"] == "loop"]
+        else:
+            boot_group = group_sorted.iloc[:1]
             loop_group = group_sorted.iloc[1:]
+
+        # 1. Initial Booting: exact raw occurrence
+        if not boot_group.empty:
+            boot_row = boot_group.iloc[0]
+            boot_val = float(boot_row[metric])
+            detailed_records.append({
+                "process": proc,
+                "plugin": plugin,
+                "model": model_name,
+                "stage": stage,
+                "phase": "Initial Booting",
+                "val_type": "Raw Datum",
+                "latency": boot_val,
+                "std": 0.0,
+                "p95": boot_val,
+                "count": 1,
+                "t_start": boot_row["t_start"],
+            })
+
+        # 2. Looping Data: subsequent occurrences / window averages
+        if not loop_group.empty:
             loop_mean = float(loop_group[metric].mean())
-            loop_std = float(loop_group[metric].std(ddof=1)) if len(loop_group) > 1 else 0.0
-            loop_p95 = float(np.percentile(loop_group[metric], 95))
+            if "std_latency_ms" in loop_group and loop_group["std_latency_ms"].max() > 0:
+                loop_std = float(loop_group["std_latency_ms"].mean())
+            else:
+                loop_std = float(loop_group[metric].std(ddof=1)) if len(loop_group) > 1 else 0.0
+
+            if "p95_latency_ms" in loop_group and loop_group["p95_latency_ms"].max() > 0:
+                loop_p95 = float(loop_group["p95_latency_ms"].mean())
+            else:
+                loop_p95 = float(np.percentile(loop_group[metric], 95))
+
+            sample_cnt = int(loop_group["sample_count"].sum()) if "sample_count" in loop_group else len(loop_group)
+
             detailed_records.append({
                 "process": proc,
                 "plugin": plugin,
@@ -135,7 +171,7 @@ def extract_cycle_statistics(df: pd.DataFrame, metric: str = "processing_latency
                 "latency": loop_mean,
                 "std": loop_std,
                 "p95": loop_p95,
-                "count": len(loop_group),
+                "count": sample_cnt,
                 "t_start": loop_group["t_start"].min(),
             })
 

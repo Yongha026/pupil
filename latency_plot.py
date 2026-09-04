@@ -66,7 +66,7 @@ def load_latency_data(
 
     df = pd.read_csv(csv_path)
 
-    expected_cols = {"process", "plugin", "stage", "processing_latency_ms", "t_start", "t_end"}
+    expected_cols = {"process", "plugin", "processing_latency_ms", "t_start", "t_end"}
     missing = expected_cols - set(df.columns)
     if missing:
         raise ValueError(f"CSV is missing expected columns: {missing}")
@@ -74,7 +74,12 @@ def load_latency_data(
     # Coerce numeric columns
     numeric_cols = [
         "processing_latency_ms",
+        "std_latency_ms",
+        "min_latency_ms",
+        "max_latency_ms",
+        "p95_latency_ms",
         "e2e_latency_ms",
+        "sample_count",
         "t_start",
         "t_end",
         "frame_timestamp",
@@ -82,6 +87,15 @@ def load_latency_data(
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if "stage" not in df.columns:
+        df["stage"] = df.get("phase", "loop")
+    if "phase" not in df.columns:
+        df["phase"] = "loop"
+    if "sample_count" not in df.columns:
+        df["sample_count"] = 1
+    if "std_latency_ms" not in df.columns:
+        df["std_latency_ms"] = 0.0
 
     # Fill default strings
     if "model" not in df.columns:

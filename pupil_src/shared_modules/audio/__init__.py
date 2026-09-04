@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
+import os
 import platform
 import subprocess as sp
 from time import sleep
@@ -89,17 +90,32 @@ def _platform_specific_switch(linux_fn, darwin_fn, windows_fn, unknown_fn, **kwa
 
 
 def _linux_beep():
-    try:
-        sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/message.ogg"])
-    except OSError:
-        logger.warning("Soundfile not found.")
+    sound_path = "/usr/share/sounds/ubuntu/stereo/message.ogg"
+    if os.path.isfile(sound_path):
+        try:
+            sp.Popen(
+                ["paplay", sound_path],
+                stdout=sp.DEVNULL,
+                stderr=sp.DEVNULL,
+            )
+        except OSError:
+            print("\a")
+    else:
         print("\a")
 
 
 def _linux_tink():
-    try:
-        sp.Popen(["paplay", "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"])
-    except OSError:
+    sound_path = "/usr/share/sounds/ubuntu/stereo/button-pressed.ogg"
+    if os.path.isfile(sound_path):
+        try:
+            sp.Popen(
+                ["paplay", sound_path],
+                stdout=sp.DEVNULL,
+                stderr=sp.DEVNULL,
+            )
+        except OSError:
+            print("\a")
+    else:
         print("\a")
 
 
