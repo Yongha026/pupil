@@ -404,7 +404,7 @@ class Plugin:
                 if not file_exists:
                     writer.writeheader()
                 writer.writerows(self.latency_log)
-            logger.info(f"Saved {len(self.latency_log)} latency entries to {log_path}")
+            # logger.info(f"Saved {len(self.latency_log)} latency entries to {log_path}")
             self.latency_log.clear()
         except Exception as e:
             logger.error(f"Failed to save latency log: {e}")
@@ -735,9 +735,9 @@ class Plugin_List:
                 if hasattr(p, "_flush_latency_log_to_file"):
                     p._flush_latency_log_to_file()
 
-                logger.info(
-                    f"Plugin {p.class_name} cleaned up at timestamp: {self.g_pool.get_timestamp()}"
-                )
+                # logger.info(
+                #     f"Plugin {p.class_name} cleaned up at timestamp: {self.g_pool.get_timestamp()}"
+                # )
                 logger.debug(f"Unloaded Plugin: {p}")
                 self._plugins.remove(p)
 
