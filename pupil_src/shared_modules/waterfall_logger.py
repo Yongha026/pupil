@@ -39,22 +39,22 @@ class WaterfallLogger:
         self.header_written = os.path.exists(self.log_path)
         self.fieldnames = [
             "frame_id",
-            "process",
-            "model",
-            "phase",
-            "ingest_ms",
-            "roi_ms",
-            "preprocess_ms",
-            "inference_ms",
-            "ellipse_fit_ms",
-            "pye3d_ms",
-            "ipc_transport_ms",
-            "gaze_mapping_ms",
-            "render_ms",
-            "buffer_swap_ms",
-            "total_system_latency_ms",
-            "t_start",
-            "t_end",
+            "process",                  # eye0 / eye1
+            "model",                    # 추론 모델(2dcpp, pmrnet, ...)
+            "phase",                    # 콜드스타트(boot) / 안정후 loop(loop)
+            "ingest_ms",                # eye 카메라 -> 프로세스 전송시간
+            "roi_ms",                   # 2dcpp 사용시 ROI 설정시간(딥러닝 모델 사용시 X)
+            "preprocess_ms",            # gamma LUT, CLAHE 등
+            "inference_ms",             # 동공 세그멘트 시간
+            "ellipse_fit_ms",           # 추론 후 동공 타원 피팅 시간
+            "pye3d_ms",                 # pye3d(3d 안구 모델) 추론시간 => 3D 안구 중심, 3d gaze 벡터
+            "ipc_transport_ms",         # eye.py, world.py 데이터 주고받은 시간(pupil data)
+            "gaze_mapping_ms",          # 3d -> 2d gaze로 gaze mapping
+            "render_ms",                # world.py 화면 렌더링 시간
+            "buffer_swap_ms",           # openGL 프레임버퍼
+            "total_system_latency_ms",  # 전체 레이턴시
+            "t_start",                  # 해당 프레임 처리 시작시간
+            "t_end",                    # 해당 프레임 처리 종료시간
         ]
 
     def log_frame_trace(self, trace_data: Dict):
