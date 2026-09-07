@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import logging
+import time
 
 import pye3d
 from methods import normalize
@@ -121,9 +122,12 @@ class Pye3DPlugin(PupilDetectorPlugin):
                 timestamp=frame.timestamp,
             )
 
+        t_pye3d_start = time.perf_counter()
         result = self.detector.update_and_detect(
             datum_2d, frame.gray, debug=self.is_debug_window_open
         )
+        t_pye3d_end = time.perf_counter()
+        pye3d_ms = (t_pye3d_end - t_pye3d_start) * 1000.0
 
         norm_pos = normalize(
             result["location"], (frame.width, frame.height), flip_y=True
@@ -135,6 +139,13 @@ class Pye3DPlugin(PupilDetectorPlugin):
             timestamp=frame.timestamp,
         )
         template.update(result)
+
+        if "waterfall_timing" in datum_2d:
+            template["waterfall_timing"] = dict(datum_2d["waterfall_timing"])
+            template["waterfall_timing"]["pye3d_ms"] = pye3d_ms
+            datum_2d["waterfall_timing"]["pye3d_ms"] = pye3d_ms
+        else:
+            template["waterfall_timing"] = {"pye3d_ms": pye3d_ms}
 
         return template
 

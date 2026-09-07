@@ -30,19 +30,35 @@ import numpy as np
 import pandas as pd
 
 
-# Default typical pipeline stages & realistic fallback values (in ms)
-DEFAULT_STAGES = [
-    ("Camera Ingest", "UVC_Source", 1.20, "Capture Latency"),
-    ("ROI Extraction", "Roi", 0.04, "Capture Latency"),
-    ("Pupil Preprocessing", "nnUNet (CLAHE/LUT)", 0.45, "Processing Latency"),
-    ("Neural Net Inference", "nnUNet (GPU Forward)", 4.12, "Processing Latency"),
-    ("Contour & Ellipse Fit", "nnUNet (fitEllipse)", 0.65, "Processing Latency"),
-    ("3D Eye Model", "Pye3D", 0.12, "Processing Latency"),
-    ("ZeroMQ IPC Transport", "ZeroMQ Socket", 0.38, "Transport Latency"),
-    ("World Gaze Mapping", "Gazer3D", 0.08, "Transport Latency"),
-    ("Render Submission", "gl_display", 0.55, "Display Latency"),
-    ("Display Buffer Swap", "glfw.swap_buffers", 1.80, "Display Latency"),
-]
+def get_pipeline_stages(model_name: str = "pmrnet", roi_val: float = 0.0) -> List[Tuple[str, str, float, str]]:
+    """
+    Returns the appropriate pipeline stages based on active model and ROI usage:
+    - 2dcpp: Includes ROI Extraction and 2D Detection (C++), omits NN Preprocessing/Ellipse Fit.
+    - Neural Net models: Omits ROI Extraction (since roi_ms == 0.0), includes Preprocessing, NN Inference, Contour/Ellipse fit.
+    """
+    if model_name == "2dcpp" or roi_val > 0.001:
+        return [
+            ("Camera Ingest", "UVC_Source", 1.20, "Capture Latency"),
+            ("ROI Extraction", "Roi", 0.03, "Capture Latency"),
+            ("2D Detection (C++)", "Detector2D", 2.80, "Processing Latency"),
+            ("3D Eye Model", "Pye3D", 0.08, "Processing Latency"),
+            ("ZeroMQ IPC Transport", "ZeroMQ Socket", 0.35, "Transport Latency"),
+            ("World Gaze Mapping", "Gazer3D", 0.05, "Transport Latency"),
+            ("Render Submission", "gl_display", 0.45, "Display Latency"),
+            ("Display Buffer Swap", "glfw.swap_buffers", 1.20, "Display Latency"),
+        ]
+    else:
+        return [
+            ("Camera Ingest", "UVC_Source", 1.20, "Capture Latency"),
+            ("Pupil Preprocessing", "nnUNet (CLAHE/LUT)", 0.45, "Processing Latency"),
+            ("Neural Net Inference", "nnUNet (GPU Forward)", 4.12, "Processing Latency"),
+            ("Contour & Ellipse Fit", "nnUNet (fitEllipse)", 0.65, "Processing Latency"),
+            ("3D Eye Model", "Pye3D", 0.08, "Processing Latency"),
+            ("ZeroMQ IPC Transport", "ZeroMQ Socket", 0.35, "Transport Latency"),
+            ("World Gaze Mapping", "Gazer3D", 0.05, "Transport Latency"),
+            ("Render Submission", "gl_display", 0.45, "Display Latency"),
+            ("Display Buffer Swap", "glfw.swap_buffers", 1.20, "Display Latency"),
+        ]
 
 
 def find_latest_waterfall_csv(base_dir: Optional[str] = None) -> Optional[str]:
@@ -62,11 +78,12 @@ def find_latest_waterfall_csv(base_dir: Optional[str] = None) -> Optional[str]:
     return max(candidates, key=os.path.getmtime)
 
 
-def load_waterfall_data(csv_path: str) -> Tuple[Dict[str, float], Dict[str, float]]:
+def load_waterfall_data(csv_path: str) -> Tuple[Dict[str, float], Dict[str, float], str]:
     """
     Loads waterfall CSV and extracts:
       1. steady_state: average duration for each stage during looping
       2. cold_start: raw duration for each stage during initial boot
+      3. model_name: detected detector model architecture
     """
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
@@ -90,6 +107,11 @@ def load_waterfall_data(csv_path: str) -> Tuple[Dict[str, float], Dict[str, floa
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
 
+    # Detect model name from log
+    model_name = "pmrnet"
+    if "model" in df.columns and not df["model"].dropna().empty:
+        model_name = str(df["model"].dropna().iloc[-1])
+
     # Separate boot (cold start) from loop (steady state)
     if "phase" in df.columns and "boot" in df["phase"].values:
         boot_df = df[df["phase"] == "boot"]
@@ -102,7 +124,7 @@ def load_waterfall_data(csv_path: str) -> Tuple[Dict[str, float], Dict[str, floa
         "ingest_ms": "Camera Ingest",
         "roi_ms": "ROI Extraction",
         "preprocess_ms": "Pupil Preprocessing",
-        "inference_ms": "Neural Net Inference",
+        "inference_ms": "2D Detection (C++)" if model_name == "2dcpp" else "Neural Net Inference",
         "ellipse_fit_ms": "Contour & Ellipse Fit",
         "pye3d_ms": "3D Eye Model",
         "ipc_transport_ms": "ZeroMQ IPC Transport",
@@ -122,7 +144,7 @@ def load_waterfall_data(csv_path: str) -> Tuple[Dict[str, float], Dict[str, floa
             steady_state[stage_name] = 0.0
             cold_start[stage_name] = 0.0
 
-    return steady_state, cold_start
+    return steady_state, cold_start, model_name
 
 
 def draw_curly_bracket(ax, x1: float, x2: float, y: float, height: float, label: str, text_pos: str = "top"):
@@ -153,13 +175,16 @@ def draw_curly_bracket(ax, x1: float, x2: float, y: float, height: float, label:
 def render_waterfall_panel(
     ax: plt.Axes,
     stage_durations: Dict[str, float],
+    model_name: str = "pmrnet",
     title: str = "System Latency Breakdown"
 ):
     """
-    Renders the sequential Reflex-style waterfall chart.
+    Renders the sequential Reflex-style waterfall chart dynamically adapted for the active model.
     """
-    stage_names = [s[0] for s in DEFAULT_STAGES]
-    durations = [max(0.01, stage_durations.get(name, s[2])) for name, s in zip(stage_names, DEFAULT_STAGES)]
+    roi_val = stage_durations.get("ROI Extraction", 0.0)
+    stages = get_pipeline_stages(model_name=model_name, roi_val=roi_val)
+    stage_names = [s[0] for s in stages]
+    durations = [max(0.001, stage_durations.get(name, s[2])) for name, s in zip(stage_names, stages)]
 
     # Compute start offsets: each stage begins when its predecessor finishes
     start_offsets = [0.0]
@@ -227,22 +252,8 @@ def render_waterfall_panel(
     ax.grid(True, axis="x", linestyle="--", alpha=0.4, zorder=1)
     ax.set_xlim(-total_latency * 0.02, total_latency * 1.14)
 
-    # Define a base height above the bars
+    # Base height above the bars for hierarchical brackets
     bracket_base_y = n_stages + 0.3
-
-    # Define durations for components
-    t_cap_start = start_offsets[0]
-    t_cap_end = start_offsets[1] + durations[1]
-    cap_dur = t_cap_end - t_cap_start
-
-    t_proc_start = start_offsets[2]
-    t_proc_end = start_offsets[7] + durations[7]
-    proc_dur = t_proc_end - t_proc_start
-
-    t_disp_start = start_offsets[8]
-    t_disp_end = start_offsets[9] + durations[9]
-    disp_dur = t_disp_end - t_disp_start
-
     total_height = 0.8
     sub_height = 0.7
 
@@ -256,10 +267,28 @@ def render_waterfall_panel(
         f"Total System Latency: {total_latency:.2f} ms",
     )
 
-    # Draw Sub-brackets (Level 2 & 3: Staggered)
-    draw_curly_bracket(ax, t_proc_start, t_proc_end, bracket_base_y + 1.2, sub_height, f"PC Processing Latency\n({proc_dur:.2f} ms)")
-    draw_curly_bracket(ax, t_disp_start, t_disp_end, bracket_base_y + 0.1, sub_height, f"Display Latency\n({disp_dur:.2f} ms)")
-    draw_curly_bracket(ax, t_cap_start, t_cap_end, bracket_base_y + 0.1, sub_height, f"Capture Latency\n({cap_dur:.2f} ms)")
+    # Compute category ranges dynamically
+    cap_indices = [i for i, s in enumerate(stages) if s[3] == "Capture Latency"]
+    proc_indices = [i for i, s in enumerate(stages) if s[3] in ("Processing Latency", "Transport Latency")]
+    disp_indices = [i for i, s in enumerate(stages) if s[3] == "Display Latency"]
+
+    if proc_indices:
+        t_proc_start = start_offsets[proc_indices[0]]
+        t_proc_end = start_offsets[proc_indices[-1]] + durations[proc_indices[-1]]
+        proc_dur = t_proc_end - t_proc_start
+        draw_curly_bracket(ax, t_proc_start, t_proc_end, bracket_base_y + 1.2, sub_height, f"PC Processing Latency\n({proc_dur:.2f} ms)")
+
+    if cap_indices:
+        t_cap_start = start_offsets[cap_indices[0]]
+        t_cap_end = start_offsets[cap_indices[-1]] + durations[cap_indices[-1]]
+        cap_dur = t_cap_end - t_cap_start
+        draw_curly_bracket(ax, t_cap_start, t_cap_end, bracket_base_y + 0.1, sub_height, f"Capture Latency\n({cap_dur:.2f} ms)")
+
+    if disp_indices:
+        t_disp_start = start_offsets[disp_indices[0]]
+        t_disp_end = start_offsets[disp_indices[-1]] + durations[disp_indices[-1]]
+        disp_dur = t_disp_end - t_disp_start
+        draw_curly_bracket(ax, t_disp_start, t_disp_end, bracket_base_y + 0.1, sub_height, f"Display Latency\n({disp_dur:.2f} ms)")
 
     ax.set_ylim(-0.8, n_stages + 5.0)
     ax.set_title(title, fontsize=14, fontweight="bold", pad=28)
@@ -302,6 +331,7 @@ def main():
 
     steady_state = {}
     cold_start = {}
+    model_name = "pmrnet"
 
     csv_file = args.csv_path
     if not args.demo:
@@ -311,7 +341,7 @@ def main():
         if csv_file and os.path.exists(csv_file):
             print(f"Loading waterfall latency log: {csv_file}")
             try:
-                steady_state, cold_start = load_waterfall_data(csv_file)
+                steady_state, cold_start, model_name = load_waterfall_data(csv_file)
             except Exception as e:
                 print(f"Warning: Could not parse CSV ({e}), falling back to verified benchmark timings.")
                 args.demo = True
@@ -321,9 +351,11 @@ def main():
 
     if args.demo or not steady_state:
         # Verified timings from remote RTX 3090 / A6000 benchmark
-        steady_state = {name: default_val for name, _, default_val, _ in DEFAULT_STAGES}
+        stages = get_pipeline_stages(model_name)
+        steady_state = {name: default_val for name, _, default_val, _ in stages}
         cold_start = dict(steady_state)
-        cold_start["Neural Net Inference"] = 198.50  # Cold start GPU allocation & CUDA kernel launch
+        if "Neural Net Inference" in cold_start:
+            cold_start["Neural Net Inference"] = 198.50  # Cold start GPU allocation & CUDA kernel launch
         cold_start["Camera Ingest"] = 14.50
 
     # Determine output path
@@ -340,12 +372,14 @@ def main():
         render_waterfall_panel(
             ax1,
             cold_start,
-            title="Initial Booting / Cold-Start System Latency"
+            model_name=model_name,
+            title=f"Initial Booting / Cold-Start System Latency ({model_name})"
         )
         render_waterfall_panel(
             ax2,
             steady_state,
-            title="Steady-State Looping System Latency"
+            model_name=model_name,
+            title=f"Steady-State Looping System Latency ({model_name})"
         )
         plt.tight_layout(pad=3.0)
     elif args.mode == "boot":
@@ -353,7 +387,8 @@ def main():
         render_waterfall_panel(
             ax,
             cold_start,
-            title="Initial Booting / Cold-Start System Latency Breakdown"
+            model_name=model_name,
+            title=f"Initial Booting / Cold-Start System Latency Breakdown ({model_name})"
         )
         plt.tight_layout()
     else:  # mode == "average"
@@ -361,7 +396,8 @@ def main():
         render_waterfall_panel(
             ax,
             steady_state,
-            title="Pupil Labs End-to-End System Latency Breakdown"
+            model_name=model_name,
+            title=f"Pupil Labs End-to-End System Latency Breakdown ({model_name})"
         )
         plt.tight_layout()
 
@@ -372,19 +408,20 @@ def main():
     except Exception as e:
         print(f"Failed to save waterfall plot image: {e}")
 
-    # Print summary
+    # Print summary table based on active stages
+    active_stages = get_pipeline_stages(model_name, steady_state.get("ROI Extraction", 0.0))
     print("\n" + "=" * 80)
-    print("                 PIPELINE STAGE LATENCY WATERFALL SUMMARY                 ")
+    print(f"       PIPELINE STAGE LATENCY WATERFALL SUMMARY (Model: {model_name})       ")
     print("=" * 80)
     print(f"{'Stage Name':<26} {'Category':<20} {'Steady State (ms)':>18} {'Cold Start (ms)':>15}")
     print("-" * 80)
-    for name, _, _, cat in DEFAULT_STAGES:
+    for name, _, _, cat in active_stages:
         ss_val = steady_state.get(name, 0.0)
         cs_val = cold_start.get(name, 0.0)
         print(f"{name:<26} {cat:<20} {ss_val:>18.2f} {cs_val:>15.2f}")
     print("=" * 80)
-    ss_tot = sum(steady_state.get(n, 0.0) for n, _, _, _ in DEFAULT_STAGES)
-    cs_tot = sum(cold_start.get(n, 0.0) for n, _, _, _ in DEFAULT_STAGES)
+    ss_tot = sum(steady_state.get(n, 0.0) for n, _, _, _ in active_stages)
+    cs_tot = sum(cold_start.get(n, 0.0) for n, _, _, _ in active_stages)
     print(f"{'TOTAL SYSTEM LATENCY':<47} {ss_tot:>18.2f} {cs_tot:>15.2f}")
     print("=" * 80 + "\n")
 

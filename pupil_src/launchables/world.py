@@ -141,6 +141,7 @@ def world(
         IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # display
+        import time
         import glfw
         from gl_utils import GLFWErrorReporting
         from OpenGL.GL import GL_COLOR_BUFFER_BIT
@@ -262,6 +263,8 @@ def world(
 
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
+        g_pool.last_render_ms = 0.0
+        g_pool.last_buffer_swap_ms = 0.0
 
         # manage plugins
         runtime_plugins = import_runtime_plugins(
@@ -819,6 +822,7 @@ def world(
             # render visual feedback from loaded plugins
             glfw.poll_events()
             if window_should_update() and gl_utils.is_window_visible(main_window):
+                t_render_start = time.perf_counter()
                 gl_utils.glViewport(0, 0, *camera_render_size)
                 for p in g_pool.plugins:
                     p.gl_display()
@@ -858,7 +862,13 @@ def world(
                         if plugin.on_char(char_):
                             break
 
+                t_render_end = time.perf_counter()
+                g_pool.last_render_ms = (t_render_end - t_render_start) * 1000.0
+
+                t_swap_start = time.perf_counter()
                 glfw.swap_buffers(main_window)
+                t_swap_end = time.perf_counter()
+                g_pool.last_buffer_swap_ms = (t_swap_end - t_swap_start) * 1000.0
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["ui_config"] = g_pool.gui.configuration

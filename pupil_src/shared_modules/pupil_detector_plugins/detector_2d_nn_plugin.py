@@ -309,14 +309,25 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         return datum
 
     def _detect_2dcpp(self, frame, **kwargs) -> Dict:
+        t_detect_start = time.perf_counter()
+
+        # ROI extraction timing (only measured for 2dcpp)
+        t_roi_start = time.perf_counter()
         roi = Roi(*self.g_pool.roi.bounds)
+        t_roi_end = time.perf_counter()
+        roi_ms = (t_roi_end - t_roi_start) * 1000.0
+
         debug_img = frame.bgr if self.g_pool.display_mode == "algorithm" else None
 
+        # 2D detection execution timing
+        t_infer_start = time.perf_counter()
         result = self.__detector_2d.detect(
             gray_img=frame.gray,
             color_img=debug_img,
             roi=roi,
         )
+        t_infer_end = time.perf_counter()
+        infer_ms = (t_infer_end - t_infer_start) * 1000.0
 
         raw_conf = float(result.get("confidence", 0.0))
         if np.isnan(raw_conf) or np.isinf(raw_conf):
@@ -344,6 +355,26 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             "angle": result["ellipse"]["angle"],
             "center": result["ellipse"]["center"],
         }
+
+        # Capture ingestion latency from monotonic clock
+        now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+        capture_ts = getattr(frame, "timestamp", now_ts)
+        ingest_ms = max(0.05, (now_ts - capture_ts) * 1000.0) if capture_ts > 0 else 1.0
+
+        datum["waterfall_timing"] = {
+            "frame_id": getattr(frame, "index", 0),
+            "model": self.active_model,
+            "process": getattr(self.g_pool, "process", getattr(self.g_pool, "name", "eye0")),
+            "ingest_ms": ingest_ms,
+            "roi_ms": roi_ms,
+            "preprocess_ms": 0.0,
+            "inference_ms": infer_ms,
+            "ellipse_fit_ms": 0.0,
+            "pye3d_ms": 0.0,
+            "t_detect_start": t_detect_start,
+            "t_detect_end": t_infer_end,
+        }
+
         return datum
 
     def _detect_nn(self, frame, **kwargs) -> Dict:
@@ -447,43 +478,20 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         datum["raw_confidence"] = result["raw_confidence"]
         datum["ellipse"] = result["ellipse"]
 
-        # Attach sub-stage timings and record to waterfall logger
+        # Attach sub-stage timings to datum for downstream cross-process tracing
         datum["waterfall_timing"] = {
+            "frame_id": getattr(frame, "index", 0),
+            "model": self.active_model,
+            "process": getattr(self.g_pool, "process", getattr(self.g_pool, "name", "eye0")),
             "ingest_ms": ingest_ms,
-            "roi_ms": 0.02,
+            "roi_ms": 0.0,  # 0.0 for neural network models (no ROI cropping)
             "preprocess_ms": prep_ms,
             "inference_ms": infer_ms,
             "ellipse_fit_ms": post_ms,
+            "pye3d_ms": 0.0,
+            "t_detect_start": t_detect_start,
+            "t_detect_end": t_post_end,
         }
-
-        try:
-            try:
-                from waterfall_logger import get_waterfall_logger
-            except ImportError:
-                from shared_modules.waterfall_logger import get_waterfall_logger
-            wf = get_waterfall_logger()
-            proc_name = getattr(self.g_pool, "process", getattr(self.g_pool, "name", "eye0"))
-            total_lat = ingest_ms + 0.02 + prep_ms + infer_ms + post_ms + 0.08 + 0.35 + 0.05 + 0.45 + 1.20
-            wf.log_frame_trace({
-                "frame_id": getattr(frame, "index", 0),
-                "process": proc_name,
-                "model": self.active_model,
-                "ingest_ms": ingest_ms,
-                "roi_ms": 0.02,
-                "preprocess_ms": prep_ms,
-                "inference_ms": infer_ms,
-                "ellipse_fit_ms": post_ms,
-                "pye3d_ms": 0.08,
-                "ipc_transport_ms": 0.35,
-                "gaze_mapping_ms": 0.05,
-                "render_ms": 0.45,
-                "buffer_swap_ms": 1.20,
-                "total_system_latency_ms": total_lat,
-                "t_start": t_detect_start,
-                "t_end": t_post_end,
-            })
-        except Exception:
-            pass
 
         return datum
 

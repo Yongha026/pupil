@@ -773,6 +773,8 @@ def eye(
                         )
 
                 for result in event.get(EVENT_KEY, ()):
+                    if isinstance(result, dict) and "waterfall_timing" in result:
+                        result["waterfall_timing"]["t_ipc_send"] = g_pool.get_timestamp()
                     pupil_socket.send(result)
 
             # GL drawing
