@@ -1,0 +1,11 @@
+date,time,model,gazer_class,accuracy_deg,accuracy_used_samples,accuracy_total_samples,precision_deg,precision_used_samples,precision_total_samples,outlier_threshold_deg,pupil_positions_count,ref_points_count,status
+2026-09-07,17:20:54,pmrnet,Gazer3D,2.0662,214,1883,0.2314,1729,1882,2.5,5434,240,success
+2026-09-07,17:21:12,pmrnet,Gazer3D,1.5366,324,1888,0.2238,1731,1887,2.5,5700,240,success
+2026-09-07,17:21:27,pmrnet,Gazer3D,1.8526,428,1854,0.253,1615,1853,2.5,5310,240,success
+2026-09-07,17:21:42,pmrnet,Gazer3D,1.8127,588,1881,0.2504,1606,1880,2.5,5386,240,success
+2026-09-07,17:21:56,pmrnet,Gazer3D,1.8668,558,1908,0.2397,1594,1907,2.5,5460,240,success
+2026-09-07,17:22:50,2dcpp,Gazer3D,1.5393,1159,2087,0.181,1986,2086,2.5,6052,240,success
+2026-09-07,17:23:05,2dcpp,Gazer3D,1.5103,1392,2113,0.1759,2008,2112,2.5,6072,240,success
+2026-09-07,17:23:19,2dcpp,Gazer3D,1.6722,1099,2074,0.1816,1901,2073,2.5,6190,240,success
+2026-09-07,17:23:33,2dcpp,Gazer3D,1.9141,880,2101,0.1758,1960,2100,2.5,6056,240,success
+2026-09-07,17:23:58,2dcpp,Gazer3D,1.6664,936,2075,0.1777,1975,2074,2.5,5980,240,success

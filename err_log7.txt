@@ -1,0 +1,125 @@
+(pupil_nnunets) byeongjun@server3:~/PycharmProjects/pupil_nnunets$ python pupil_src/main.py 
+Session latency logging to: /home/byeongjun/PycharmProjects/pupil_nnunets/logged_latencies/latency_2026-09-07_17-18-08.csv
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+[17:18:16] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'pmrnet'                                                                   detector_2d_nn_plugin.py:293
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'pmrnet'...                                                                    detector_2d_nn_plugin.py:274
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'pmrnet'                                                                   detector_2d_nn_plugin.py:293
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'pmrnet'...                                                                    detector_2d_nn_plugin.py:274
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:165
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'pmrnet' onto cuda...                                                                                    detector_2d_nn_plugin.py:169
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:165
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'pmrnet' onto cuda...                                                                                    detector_2d_nn_plugin.py:169
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded PMRNet weights from                                                                          detector_2d_nn_plugin.py:265
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/pmr_nn_best.pth                                                                         
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded PMRNet weights from                                                                          detector_2d_nn_plugin.py:265
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/pmr_nn_best.pth                                                                         
+[17:18:23] INFO     eye0 - video_capture.uvc_backend: Exposure mode for camera Pupil Cam2 ID0 is now set to auto mode                                                                               uvc_backend.py:728
+[17:18:29] INFO     eye1 - video_capture.uvc_backend: Exposure mode for camera Pupil Cam2 ID1 is now set to auto mode                                                                               uvc_backend.py:728
+[17:20:06] INFO     world - calibration_choreography.base_plugin: Starting  Calibration                                                                                                             base_plugin.py:628
+[17:20:33] INFO     world - calibration_choreography.base_plugin: Stopping  Calibration                                                                                                             base_plugin.py:667
+The maximum number of function evaluations is exceeded.
+Function evaluations 100, initial cost 1.4482e+01, final cost 3.3112e+00, first-order optimality 6.89e-03.
+`ftol` termination condition is satisfied.
+Function evaluations 18, initial cost 1.3266e+00, final cost 8.2680e-01, first-order optimality 3.00e-05.
+`ftol` termination condition is satisfied.
+Function evaluations 14, initial cost 1.3689e+01, final cost 5.8964e+00, first-order optimality 9.44e-05.
+[17:20:35] INFO     world - accuracy_visualizer: Angular accuracy: 2.262 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.240 degrees                                                                                                           accuracy_visualizer.py:436
+[17:20:41] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:20:54] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - accuracy_visualizer: Angular accuracy: 2.066 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.231 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=2.0662   accuracy_visualizer.py:541
+                    deg, Precision=0.2314 deg (Model: pmrnet)                                                                                                                                                         
+[17:20:59] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:21:12] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - accuracy_visualizer: Angular accuracy: 1.537 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.224 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.5366   accuracy_visualizer.py:541
+                    deg, Precision=0.2238 deg (Model: pmrnet)                                                                                                                                                         
+[17:21:14] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:21:27] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - accuracy_visualizer: Angular accuracy: 1.853 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.253 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.8526   accuracy_visualizer.py:541
+                    deg, Precision=0.253 deg (Model: pmrnet)                                                                                                                                                          
+[17:21:29] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:21:41] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+[17:21:42] INFO     world - accuracy_visualizer: Angular accuracy: 1.813 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.250 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.8127   accuracy_visualizer.py:541
+                    deg, Precision=0.2504 deg (Model: pmrnet)                                                                                                                                                         
+[17:21:43] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:21:56] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - accuracy_visualizer: Angular accuracy: 1.867 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.240 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.8668   accuracy_visualizer.py:541
+                    deg, Precision=0.2397 deg (Model: pmrnet)                                                                                                                                                         
+[17:22:01] INFO     world - launchables.world: Broadcasted pupil detector model change to: 2dcpp                                                                                                          world.py:132
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to '2dcpp'                                                                    detector_2d_nn_plugin.py:293
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to '2dcpp'...                                                                     detector_2d_nn_plugin.py:274
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to '2dcpp'                                                                    detector_2d_nn_plugin.py:293
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to '2dcpp'...                                                                     detector_2d_nn_plugin.py:274
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:165
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:165
+[17:22:07] INFO     world - calibration_choreography.base_plugin: Starting  Calibration                                                                                                             base_plugin.py:628
+[17:22:36] INFO     world - calibration_choreography.base_plugin: Stopping  Calibration                                                                                                             base_plugin.py:667
+The maximum number of function evaluations is exceeded.
+Function evaluations 100, initial cost 1.1530e+01, final cost 1.1603e+00, first-order optimality 1.80e-03.
+Both `ftol` and `xtol` termination conditions are satisfied.
+Function evaluations 8, initial cost 1.2434e+00, final cost 2.3542e-01, first-order optimality 1.09e-05.
+`ftol` termination condition is satisfied.
+Function evaluations 12, initial cost 1.1278e+01, final cost 1.5797e+00, first-order optimality 3.31e-05.
+           WARNING  world - accuracy_visualizer: Did not collect enough data to estimate gaze mapping accuracy.                                                                             accuracy_visualizer.py:417
+[17:22:38] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:22:50] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - accuracy_visualizer: Angular accuracy: 1.539 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.181 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.5393   accuracy_visualizer.py:541
+                    deg, Precision=0.181 deg (Model: 2dcpp)                                                                                                                                                           
+[17:22:52] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:23:04] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+[17:23:05] INFO     world - accuracy_visualizer: Angular accuracy: 1.510 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.176 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.5103   accuracy_visualizer.py:541
+                    deg, Precision=0.1759 deg (Model: 2dcpp)                                                                                                                                                          
+[17:23:06] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:23:18] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+[17:23:19] INFO     world - accuracy_visualizer: Angular accuracy: 1.672 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.182 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.6722   accuracy_visualizer.py:541
+                    deg, Precision=0.1816 deg (Model: 2dcpp)                                                                                                                                                          
+[17:23:20] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:23:32] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+[17:23:33] INFO     world - accuracy_visualizer: Angular accuracy: 1.914 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.176 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.9141   accuracy_visualizer.py:541
+                    deg, Precision=0.1758 deg (Model: 2dcpp)                                                                                                                                                          
+[17:23:45] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[17:23:58] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - accuracy_visualizer: Angular accuracy: 1.666 degrees                                                                                                            accuracy_visualizer.py:427
+           INFO     world - accuracy_visualizer: Angular precision: 0.178 degrees                                                                                                           accuracy_visualizer.py:436
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_07.csv: Accuracy=1.6664   accuracy_visualizer.py:541
+                    deg, Precision=0.1777 deg (Model: 2dcpp)                                                                                                                                                          
+*** Correcting clock frequency to 14999158
+*** Correcting clock frequency to 14999163
+*** Correcting clock frequency to 14999199
+[17:24:20] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:165
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.          
