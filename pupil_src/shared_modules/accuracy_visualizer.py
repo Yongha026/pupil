@@ -8,7 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import csv
+from datetime import datetime
 import logging
+import os
 import traceback
 import typing as T
 
@@ -307,6 +310,9 @@ class Accuracy_Visualizer(Plugin):
                 else "Not available",
             )
         )
+        self.menu.append(
+            ui.Button("Export Validation Results to CSV", self._export_validation_to_csv)
+        )
 
     def deinit_ui(self):
         self.remove_menu()
@@ -383,6 +389,7 @@ class Accuracy_Visualizer(Plugin):
         )
 
         self.recalculate()
+        self._export_validation_to_csv()
         return True
 
     def recalculate(self):
@@ -439,6 +446,104 @@ class Accuracy_Visualizer(Plugin):
                 except scipy.spatial.qhull.QhullError:
                     logger.warning("Calibration area could not be calculated")
                     logger.debug(traceback.format_exc())
+
+    def _export_validation_to_csv(self):
+        """Appends validation results to 'validation_results_YY_MM_DD.csv' in val_results directory."""
+        if not self.recent_input.is_complete or (self.accuracy is None and self.precision is None):
+            logger.warning("No completed validation results available to export to CSV.")
+            return
+
+        try:
+            root_dir = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
+            val_dir = os.environ.get(
+                "PUPIL_VALIDATION_DIR", os.path.join(root_dir, "val_results")
+            )
+            os.makedirs(val_dir, exist_ok=True)
+
+            date_str = datetime.now().strftime("%y_%m_%d")
+            filename = f"validation_results_{date_str}.csv"
+            csv_path = os.path.join(val_dir, filename)
+
+            file_exists = os.path.exists(csv_path)
+
+            fieldnames = [
+                "date",
+                "time",
+                "model",
+                "gazer_class",
+                "accuracy_deg",
+                "accuracy_used_samples",
+                "accuracy_total_samples",
+                "precision_deg",
+                "precision_used_samples",
+                "precision_total_samples",
+                "outlier_threshold_deg",
+                "pupil_positions_count",
+                "ref_points_count",
+                "status",
+            ]
+
+            now = datetime.now()
+            model_name = getattr(self.g_pool, "pupil_detector_model", "unknown")
+            gazer_name = getattr(self.recent_input, "gazer_class_name", "unknown")
+
+            acc_val = (
+                round(float(self.accuracy.result), 4)
+                if self.accuracy and not np.isnan(self.accuracy.result)
+                else ""
+            )
+            acc_used = self.accuracy.num_used if self.accuracy else 0
+            acc_total = self.accuracy.num_total if self.accuracy else 0
+
+            prec_val = (
+                round(float(self.precision.result), 4)
+                if self.precision and not np.isnan(self.precision.result)
+                else ""
+            )
+            prec_used = self.precision.num_used if self.precision else 0
+            prec_total = self.precision.num_total if self.precision else 0
+
+            status = (
+                "success"
+                if (self.accuracy is not None and self.precision is not None)
+                else "failed"
+            )
+
+            row = {
+                "date": now.strftime("%Y-%m-%d"),
+                "time": now.strftime("%H:%M:%S"),
+                "model": model_name,
+                "gazer_class": gazer_name,
+                "accuracy_deg": acc_val,
+                "accuracy_used_samples": acc_used,
+                "accuracy_total_samples": acc_total,
+                "precision_deg": prec_val,
+                "precision_used_samples": prec_used,
+                "precision_total_samples": prec_total,
+                "outlier_threshold_deg": self.outlier_threshold,
+                "pupil_positions_count": len(
+                    getattr(self.recent_input, "pupil_list", []) or []
+                ),
+                "ref_points_count": len(
+                    getattr(self.recent_input, "ref_list", []) or []
+                ),
+                "status": status,
+            }
+
+            with open(csv_path, "a", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerow(row)
+
+            logger.info(
+                f"Validation result appended to {csv_path}: "
+                f"Accuracy={acc_val} deg, Precision={prec_val} deg (Model: {model_name})"
+            )
+        except Exception as e:
+            logger.error(f"Failed to export validation result to CSV: {e}")
 
     @staticmethod
     def calc_acc_prec_errlines(

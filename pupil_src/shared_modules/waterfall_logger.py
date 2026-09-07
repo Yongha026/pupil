@@ -37,24 +37,26 @@ class WaterfallLogger:
         self.buffer = []
         self.frame_count = 0
         self.header_written = os.path.exists(self.log_path)
+        # @pupil_data_relay.py에서 모든 데이터 취합 후 waterfall logger로 전송.
+        # 아직 render는 하지 않았으니 해당 데이터 없으면(첫 번째 loop) 0.0으로 fallback.
         self.fieldnames = [
             "frame_id",
             "process",                  # eye0 / eye1
             "model",                    # 추론 모델(2dcpp, pmrnet, ...)
             "phase",                    # 콜드스타트(boot) / 안정후 loop(loop)
-            "ingest_ms",                # eye 카메라 -> 프로세스 전송시간
-            "roi_ms",                   # 2dcpp 사용시 ROI 설정시간(딥러닝 모델 사용시 X)
-            "preprocess_ms",            # gamma LUT, CLAHE 등
-            "inference_ms",             # 동공 세그멘트 시간
-            "ellipse_fit_ms",           # 추론 후 동공 타원 피팅 시간
-            "pye3d_ms",                 # pye3d(3d 안구 모델) 추론시간 => 3D 안구 중심, 3d gaze 벡터
-            "ipc_transport_ms",         # eye.py, world.py 데이터 주고받은 시간(pupil data)
-            "gaze_mapping_ms",          # 3d -> 2d gaze로 gaze mapping
-            "render_ms",                # world.py 화면 렌더링 시간
-            "buffer_swap_ms",           # openGL 프레임버퍼
-            "total_system_latency_ms",  # 전체 레이턴시
-            "t_start",                  # 해당 프레임 처리 시작시간
-            "t_end",                    # 해당 프레임 처리 종료시간
+            "ingest_ms",                # eye 카메라 -> 프로세스 전송시간 @detector_2d_nn_plugin. 현재시간 - frame에 찍혀있는 timestamp
+            "roi_ms",                   # 2dcpp 사용시 ROI 설정시간(딥러닝 모델 사용시 X)  @detector_2d_nn_plugin.py
+            "preprocess_ms",            # gamma LUT, CLAHE 등    @detector_2d_nn_plugin.py
+            "inference_ms",             # 동공 세그멘트 시간    @detector_2d_nn_plugin.py
+            "ellipse_fit_ms",           # 추론 후 동공 타원 피팅 시간  @detector_2d_nn_plugin.py
+            "pye3d_ms",                 # pye3d(3d 안구 모델) 추론시간 => 3D 안구 중심, 3d gaze 벡터  @pye3d_plugin.py
+            "ipc_transport_ms",         # eye.py, world.py 데이터 주고받은 시간(pupil data)  @eye.py send() - @pupil_data_relay.py recv()
+            "gaze_mapping_ms",          # 3d -> 2d gaze로 gaze mapping   @puipl_data_relay.py
+            "render_ms",                # world.py 화면 렌더링 시간    @world.py
+            "buffer_swap_ms",           # openGL 프레임버퍼  @world.py
+            "total_system_latency_ms",  # 전체 레이턴시 @pupil_data_relay.py
+            "t_start",                  # 해당 프레임 처리 시작시간    @detector_2d_nn_plugin.py
+            "t_end",                    # 해당 프레임 처리 종료시간    @detector_2d_nn_plugin.py
         ]
 
     def log_frame_trace(self, trace_data: Dict):

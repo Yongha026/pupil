@@ -296,7 +296,7 @@ def render_waterfall_panel(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate an NVIDIA Reflex-style end-to-end waterfall latency chart for Pupil Labs."
+        description="Generate end-to-end waterfall latency chart for Pupil Labs."
     )
     parser.add_argument(
         "csv_path",
@@ -325,6 +325,11 @@ def main():
         "--show",
         action="store_true",
         help="Display interactive matplotlib window (requires graphical display/X11).",
+    )
+    parser.add_argument(
+        "--print",
+        action="store_true",
+        help="Print results only(don't show)"
     )
 
     args = parser.parse_args()
@@ -409,23 +414,24 @@ def main():
         print(f"Failed to save waterfall plot image: {e}")
 
     # Print summary table based on active stages
-    active_stages = get_pipeline_stages(model_name, steady_state.get("ROI Extraction", 0.0))
-    print("\n" + "=" * 80)
-    print(f"       PIPELINE STAGE LATENCY WATERFALL SUMMARY (Model: {model_name})       ")
-    print("=" * 80)
-    print(f"{'Stage Name':<26} {'Category':<20} {'Steady State (ms)':>18} {'Cold Start (ms)':>15}")
-    print("-" * 80)
-    for name, _, _, cat in active_stages:
-        ss_val = steady_state.get(name, 0.0)
-        cs_val = cold_start.get(name, 0.0)
-        print(f"{name:<26} {cat:<20} {ss_val:>18.2f} {cs_val:>15.2f}")
-    print("=" * 80)
-    ss_tot = sum(steady_state.get(n, 0.0) for n, _, _, _ in active_stages)
-    cs_tot = sum(cold_start.get(n, 0.0) for n, _, _, _ in active_stages)
-    print(f"{'TOTAL SYSTEM LATENCY':<47} {ss_tot:>18.2f} {cs_tot:>15.2f}")
-    print("=" * 80 + "\n")
+    if args.print:
+        active_stages = get_pipeline_stages(model_name, steady_state.get("ROI Extraction", 0.0))
+        print("\n" + "=" * 80)
+        print(f"       PIPELINE STAGE LATENCY WATERFALL SUMMARY (Model: {model_name})       ")
+        print("=" * 80)
+        print(f"{'Stage Name':<26} {'Category':<20} {'Steady State (ms)':>18} {'Cold Start (ms)':>15}")
+        print("-" * 80)
+        for name, _, _, cat in active_stages:
+            ss_val = steady_state.get(name, 0.0)
+            cs_val = cold_start.get(name, 0.0)
+            print(f"{name:<26} {cat:<20} {ss_val:>18.2f} {cs_val:>15.2f}")
+        print("=" * 80)
+        ss_tot = sum(steady_state.get(n, 0.0) for n, _, _, _ in active_stages)
+        cs_tot = sum(cold_start.get(n, 0.0) for n, _, _, _ in active_stages)
+        print(f"{'TOTAL SYSTEM LATENCY':<47} {ss_tot:>18.2f} {cs_tot:>15.2f}")
+        print("=" * 80 + "\n")
 
-    if args.show:
+    if args.show or not args.print:
         try:
             plt.show()
         except Exception as e:

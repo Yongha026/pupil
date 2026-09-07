@@ -64,169 +64,169 @@ class Plugin:
         if getattr(g_pool, "debug", False):
             self.__monkeypatch_gl_display_error_checking()
 
-        self._wrap_methods_for_latency()
+        # self._wrap_methods_for_latency()
 
-    def _wrap_methods_for_latency(self):
-        import time
-        import types
-        import numpy as np
-
-        # Infrastructure plugins that do not process frame/gaze data and pollute logs
-        IGNORED_PLUGINS = {
-            "NDSI_Manager",
-            "HMD_Streaming_Manager",
-            "Log_Display",
-            "Log_History",
-            "File_Manager",
-            "UVC_Manager",
-            "Network_API",
-            "Pupil_Remote",
-            "Frame_Publisher",
-        }
-        if self.class_name in IGNORED_PLUGINS:
-            return
-
-        # Major plugin step: recent_events is the universal workhorse where frame processing occurs
-        method_name = "recent_events"
-        original_method = getattr(self, method_name, None)
-        if original_method is None:
-            return
-
-        base_method = getattr(Plugin, method_name, None)
-        if base_method is not None and original_method.__func__ is base_method:
-            return
-
-        # Check if already wrapped
-        if getattr(original_method, "__wrapped_for_latency__", False) or getattr(
-            original_method.__func__, "__wrapped_for_latency__", False
-        ):
-            return
-
-        # Windowed aggregation state (1.0s window by default)
-        self._latency_boot_recorded = False
-        self._latency_window_duration = float(
-            os.environ.get("PUPIL_LATENCY_WINDOW_SEC", "1.0")
-        )
-        self._latency_window_start = None
-        self._latency_window_samples = []
-        self._latency_window_e2e = []
-
-        def make_wrapper(orig_method):
-            def wrapper(inst, *args, **kwargs):
-                # Skip empty ticks where no events occurred
-                if args:
-                    first_arg = args[0]
-                    if isinstance(first_arg, (list, dict)) and len(first_arg) == 0:
-                        return orig_method(inst, *args, **kwargs)
-
-                t_start = time.perf_counter()
-                res = orig_method(inst, *args, **kwargs)
-                t_end = time.perf_counter()
-                proc_latency_ms = (t_end - t_start) * 1000.0
-
-                # Resolve source frame / event timestamp
-                frame_ts = None
-                if args:
-                    first_arg = args[0]
-                    if hasattr(first_arg, "timestamp"):
-                        frame_ts = first_arg.timestamp
-                    elif isinstance(first_arg, dict) and "frame" in first_arg:
-                        frame = first_arg["frame"]
-                        if hasattr(frame, "timestamp"):
-                            frame_ts = frame.timestamp
-                    elif isinstance(first_arg, dict) and "timestamp" in first_arg:
-                        frame_ts = first_arg["timestamp"]
-                    elif isinstance(first_arg, list) and len(first_arg) > 0:
-                        if hasattr(first_arg[0], "timestamp"):
-                            frame_ts = first_arg[0].timestamp
-                        elif (
-                            isinstance(first_arg[0], dict)
-                            and "timestamp" in first_arg[0]
-                        ):
-                            frame_ts = first_arg[0]["timestamp"]
-
-                # Compute accurate cumulative E2E latency using Pupil clock
-                try:
-                    now_pupil_time = inst.g_pool.get_timestamp()
-                    e2e_latency_ms = (
-                        (now_pupil_time - frame_ts) * 1000.0
-                        if frame_ts
-                        else proc_latency_ms
-                    )
-                except Exception:
-                    e2e_latency_ms = proc_latency_ms
-
-                process_name = getattr(
-                    inst.g_pool, "process", getattr(inst.g_pool, "name", "unknown")
-                )
-                model_tag = getattr(inst, "active_model", inst.class_name)
-
-                # 1. Initial Booting Phase: Log raw datum for the very first execution
-                if not getattr(inst, "_latency_boot_recorded", False):
-                    inst._latency_boot_recorded = True
-                    inst._latency_window_start = t_end
-                    inst.latency_log.append({
-                        "process": process_name,
-                        "plugin": inst.class_name,
-                        "model": model_tag,
-                        "phase": "boot",
-                        "sample_count": 1,
-                        "processing_latency_ms": proc_latency_ms,
-                        "std_latency_ms": 0.0,
-                        "min_latency_ms": proc_latency_ms,
-                        "max_latency_ms": proc_latency_ms,
-                        "p95_latency_ms": proc_latency_ms,
-                        "e2e_latency_ms": e2e_latency_ms,
-                        "t_start": t_start,
-                        "t_end": t_end,
-                    })
-                    return res
-
-                # 2. Steady-State Looping Phase: Accumulate into windowed rolling average
-                inst._latency_window_samples.append(proc_latency_ms)
-                inst._latency_window_e2e.append(e2e_latency_ms)
-
-                if inst._latency_window_start is None:
-                    inst._latency_window_start = t_start
-
-                if (t_end - inst._latency_window_start) >= inst._latency_window_duration:
-                    samples = inst._latency_window_samples
-                    e2e_samples = inst._latency_window_e2e
-                    n = len(samples)
-
-                    inst.latency_log.append({
-                        "process": process_name,
-                        "plugin": inst.class_name,
-                        "model": model_tag,
-                        "phase": "loop",
-                        "sample_count": n,
-                        "processing_latency_ms": float(np.mean(samples)),
-                        "std_latency_ms": float(np.std(samples)) if n > 1 else 0.0,
-                        "min_latency_ms": float(np.min(samples)),
-                        "max_latency_ms": float(np.max(samples)),
-                        "p95_latency_ms": float(np.percentile(samples, 95)),
-                        "e2e_latency_ms": float(np.mean(e2e_samples)) if e2e_samples else proc_latency_ms,
-                        "t_start": inst._latency_window_start,
-                        "t_end": t_end,
-                    })
-
-                    inst._latency_window_samples.clear()
-                    inst._latency_window_e2e.clear()
-                    inst._latency_window_start = t_end
-
-                    # Periodically flush in long capture runs
-                    if len(inst.latency_log) >= 50:
-                        inst._flush_latency_log_to_file()
-
-                return res
-
-            return wrapper
-
-        unbound_func = original_method.__func__
-        wrapped_func = make_wrapper(unbound_func)
-        wrapped_func.__wrapped_for_latency__ = True
-        wrapper_method = types.MethodType(wrapped_func, self)
-        setattr(self, method_name, wrapper_method)
+    # def _wrap_methods_for_latency(self):
+    #     import time
+    #     import types
+    #     import numpy as np
+    #
+    #     # Infrastructure plugins that do not process frame/gaze data and pollute logs
+    #     IGNORED_PLUGINS = {
+    #         "NDSI_Manager",
+    #         "HMD_Streaming_Manager",
+    #         "Log_Display",
+    #         "Log_History",
+    #         "File_Manager",
+    #         "UVC_Manager",
+    #         "Network_API",
+    #         "Pupil_Remote",
+    #         "Frame_Publisher",
+    #     }
+    #     if self.class_name in IGNORED_PLUGINS:
+    #         return
+    #
+    #     # Major plugin step: recent_events is the universal workhorse where frame processing occurs
+    #     method_name = "recent_events"
+    #     original_method = getattr(self, method_name, None)
+    #     if original_method is None:
+    #         return
+    #
+    #     base_method = getattr(Plugin, method_name, None)
+    #     if base_method is not None and original_method.__func__ is base_method:
+    #         return
+    #
+    #     # Check if already wrapped
+    #     if getattr(original_method, "__wrapped_for_latency__", False) or getattr(
+    #         original_method.__func__, "__wrapped_for_latency__", False
+    #     ):
+    #         return
+    #
+    #     # Windowed aggregation state (1.0s window by default)
+    #     self._latency_boot_recorded = False
+    #     self._latency_window_duration = float(
+    #         os.environ.get("PUPIL_LATENCY_WINDOW_SEC", "1.0")
+    #     )
+    #     self._latency_window_start = None
+    #     self._latency_window_samples = []
+    #     self._latency_window_e2e = []
+    #
+    #     def make_wrapper(orig_method):
+    #         def wrapper(inst, *args, **kwargs):
+    #             # Skip empty ticks where no events occurred
+    #             if args:
+    #                 first_arg = args[0]
+    #                 if isinstance(first_arg, (list, dict)) and len(first_arg) == 0:
+    #                     return orig_method(inst, *args, **kwargs)
+    #
+    #             t_start = time.perf_counter()
+    #             res = orig_method(inst, *args, **kwargs)
+    #             t_end = time.perf_counter()
+    #             proc_latency_ms = (t_end - t_start) * 1000.0
+    #
+    #             # Resolve source frame / event timestamp
+    #             frame_ts = None
+    #             if args:
+    #                 first_arg = args[0]
+    #                 if hasattr(first_arg, "timestamp"):
+    #                     frame_ts = first_arg.timestamp
+    #                 elif isinstance(first_arg, dict) and "frame" in first_arg:
+    #                     frame = first_arg["frame"]
+    #                     if hasattr(frame, "timestamp"):
+    #                         frame_ts = frame.timestamp
+    #                 elif isinstance(first_arg, dict) and "timestamp" in first_arg:
+    #                     frame_ts = first_arg["timestamp"]
+    #                 elif isinstance(first_arg, list) and len(first_arg) > 0:
+    #                     if hasattr(first_arg[0], "timestamp"):
+    #                         frame_ts = first_arg[0].timestamp
+    #                     elif (
+    #                         isinstance(first_arg[0], dict)
+    #                         and "timestamp" in first_arg[0]
+    #                     ):
+    #                         frame_ts = first_arg[0]["timestamp"]
+    #
+    #             # Compute accurate cumulative E2E latency using Pupil clock
+    #             try:
+    #                 now_pupil_time = inst.g_pool.get_timestamp()
+    #                 e2e_latency_ms = (
+    #                     (now_pupil_time - frame_ts) * 1000.0
+    #                     if frame_ts
+    #                     else proc_latency_ms
+    #                 )
+    #             except Exception:
+    #                 e2e_latency_ms = proc_latency_ms
+    #
+    #             process_name = getattr(
+    #                 inst.g_pool, "process", getattr(inst.g_pool, "name", "unknown")
+    #             )
+    #             model_tag = getattr(inst, "active_model", inst.class_name)
+    #
+    #             # 1. Initial Booting Phase: Log raw datum for the very first execution
+    #             if not getattr(inst, "_latency_boot_recorded", False):
+    #                 inst._latency_boot_recorded = True
+    #                 inst._latency_window_start = t_end
+    #                 inst.latency_log.append({
+    #                     "process": process_name,
+    #                     "plugin": inst.class_name,
+    #                     "model": model_tag,
+    #                     "phase": "boot",
+    #                     "sample_count": 1,
+    #                     "processing_latency_ms": proc_latency_ms,
+    #                     "std_latency_ms": 0.0,
+    #                     "min_latency_ms": proc_latency_ms,
+    #                     "max_latency_ms": proc_latency_ms,
+    #                     "p95_latency_ms": proc_latency_ms,
+    #                     "e2e_latency_ms": e2e_latency_ms,
+    #                     "t_start": t_start,
+    #                     "t_end": t_end,
+    #                 })
+    #                 return res
+    #
+    #             # 2. Steady-State Looping Phase: Accumulate into windowed rolling average
+    #             inst._latency_window_samples.append(proc_latency_ms)
+    #             inst._latency_window_e2e.append(e2e_latency_ms)
+    #
+    #             if inst._latency_window_start is None:
+    #                 inst._latency_window_start = t_start
+    #
+    #             if (t_end - inst._latency_window_start) >= inst._latency_window_duration:
+    #                 samples = inst._latency_window_samples
+    #                 e2e_samples = inst._latency_window_e2e
+    #                 n = len(samples)
+    #
+    #                 inst.latency_log.append({
+    #                     "process": process_name,
+    #                     "plugin": inst.class_name,
+    #                     "model": model_tag,
+    #                     "phase": "loop",
+    #                     "sample_count": n,
+    #                     "processing_latency_ms": float(np.mean(samples)),
+    #                     "std_latency_ms": float(np.std(samples)) if n > 1 else 0.0,
+    #                     "min_latency_ms": float(np.min(samples)),
+    #                     "max_latency_ms": float(np.max(samples)),
+    #                     "p95_latency_ms": float(np.percentile(samples, 95)),
+    #                     "e2e_latency_ms": float(np.mean(e2e_samples)) if e2e_samples else proc_latency_ms,
+    #                     "t_start": inst._latency_window_start,
+    #                     "t_end": t_end,
+    #                 })
+    #
+    #                 inst._latency_window_samples.clear()
+    #                 inst._latency_window_e2e.clear()
+    #                 inst._latency_window_start = t_end
+    #
+    #                 # Periodically flush in long capture runs
+    #                 if len(inst.latency_log) >= 50:
+    #                     inst._flush_latency_log_to_file()
+    #
+    #             return res
+    #
+    #         return wrapper
+    #
+    #     unbound_func = original_method.__func__
+    #     wrapped_func = make_wrapper(unbound_func)
+    #     wrapped_func.__wrapped_for_latency__ = True
+    #     wrapper_method = types.MethodType(wrapped_func, self)
+    #     setattr(self, method_name, wrapper_method)
 
     def init_ui(self):
         """
@@ -333,81 +333,81 @@ class Plugin:
         """
         pass
 
-    def _flush_latency_log_to_file(self):
-        # Flush any trailing uncommitted window samples before saving
-        if getattr(self, "_latency_window_samples", None) and len(self._latency_window_samples) > 0:
-            import time
-            import numpy as np
-            samples = self._latency_window_samples
-            e2e_samples = self._latency_window_e2e
-            n = len(samples)
-            process_name = getattr(self.g_pool, "process", getattr(self.g_pool, "name", "unknown"))
-            model_tag = getattr(self, "active_model", self.class_name)
-            t_start = self._latency_window_start or time.perf_counter()
-            t_end = time.perf_counter()
-
-            self.latency_log.append({
-                "process": process_name,
-                "plugin": self.class_name,
-                "model": model_tag,
-                "phase": "loop",
-                "sample_count": n,
-                "processing_latency_ms": float(np.mean(samples)),
-                "std_latency_ms": float(np.std(samples)) if n > 1 else 0.0,
-                "min_latency_ms": float(np.min(samples)),
-                "max_latency_ms": float(np.max(samples)),
-                "p95_latency_ms": float(np.percentile(samples, 95)),
-                "e2e_latency_ms": float(np.mean(e2e_samples)) if e2e_samples else 0.0,
-                "t_start": t_start,
-                "t_end": t_end,
-            })
-            self._latency_window_samples.clear()
-            self._latency_window_e2e.clear()
-
-        if not getattr(self, "latency_log", None):
-            return
-
-        import csv
-        from datetime import datetime
-
-        log_path = os.environ.get("PUPIL_LATENCY_CSV", None)
-        if not log_path:
-            root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-            log_dir = os.path.join(root_dir, "logged_latencies")
-            os.makedirs(log_dir, exist_ok=True)
-            session_time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            log_path = os.path.join(log_dir, f"latency_{session_time_str}.csv")
-            os.environ["PUPIL_LATENCY_CSV"] = log_path
-
-        try:
-            os.makedirs(os.path.dirname(os.path.abspath(log_path)), exist_ok=True)
-            file_exists = os.path.exists(log_path)
-            with open(log_path, "a", newline="") as f:
-                writer = csv.DictWriter(
-                    f,
-                    fieldnames=[
-                        "process",
-                        "plugin",
-                        "model",
-                        "phase",
-                        "sample_count",
-                        "processing_latency_ms",
-                        "std_latency_ms",
-                        "min_latency_ms",
-                        "max_latency_ms",
-                        "p95_latency_ms",
-                        "e2e_latency_ms",
-                        "t_start",
-                        "t_end",
-                    ],
-                )
-                if not file_exists:
-                    writer.writeheader()
-                writer.writerows(self.latency_log)
-            # logger.info(f"Saved {len(self.latency_log)} latency entries to {log_path}")
-            self.latency_log.clear()
-        except Exception as e:
-            logger.error(f"Failed to save latency log: {e}")
+    # def _flush_latency_log_to_file(self):
+    #     # Flush any trailing uncommitted window samples before saving
+    #     if getattr(self, "_latency_window_samples", None) and len(self._latency_window_samples) > 0:
+    #         import time
+    #         import numpy as np
+    #         samples = self._latency_window_samples
+    #         e2e_samples = self._latency_window_e2e
+    #         n = len(samples)
+    #         process_name = getattr(self.g_pool, "process", getattr(self.g_pool, "name", "unknown"))
+    #         model_tag = getattr(self, "active_model", self.class_name)
+    #         t_start = self._latency_window_start or time.perf_counter()
+    #         t_end = time.perf_counter()
+    #
+    #         self.latency_log.append({
+    #             "process": process_name,
+    #             "plugin": self.class_name,
+    #             "model": model_tag,
+    #             "phase": "loop",
+    #             "sample_count": n,
+    #             "processing_latency_ms": float(np.mean(samples)),
+    #             "std_latency_ms": float(np.std(samples)) if n > 1 else 0.0,
+    #             "min_latency_ms": float(np.min(samples)),
+    #             "max_latency_ms": float(np.max(samples)),
+    #             "p95_latency_ms": float(np.percentile(samples, 95)),
+    #             "e2e_latency_ms": float(np.mean(e2e_samples)) if e2e_samples else 0.0,
+    #             "t_start": t_start,
+    #             "t_end": t_end,
+    #         })
+    #         self._latency_window_samples.clear()
+    #         self._latency_window_e2e.clear()
+    #
+    #     if not getattr(self, "latency_log", None):
+    #         return
+    #
+    #     import csv
+    #     from datetime import datetime
+    #
+    #     log_path = os.environ.get("PUPIL_LATENCY_CSV", None)
+    #     if not log_path:
+    #         root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    #         log_dir = os.path.join(root_dir, "logged_latencies")
+    #         os.makedirs(log_dir, exist_ok=True)
+    #         session_time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    #         log_path = os.path.join(log_dir, f"latency_{session_time_str}.csv")
+    #         os.environ["PUPIL_LATENCY_CSV"] = log_path
+    #
+    #     try:
+    #         os.makedirs(os.path.dirname(os.path.abspath(log_path)), exist_ok=True)
+    #         file_exists = os.path.exists(log_path)
+    #         with open(log_path, "a", newline="") as f:
+    #             writer = csv.DictWriter(
+    #                 f,
+    #                 fieldnames=[
+    #                     "process",
+    #                     "plugin",
+    #                     "model",
+    #                     "phase",
+    #                     "sample_count",
+    #                     "processing_latency_ms",
+    #                     "std_latency_ms",
+    #                     "min_latency_ms",
+    #                     "max_latency_ms",
+    #                     "p95_latency_ms",
+    #                     "e2e_latency_ms",
+    #                     "t_start",
+    #                     "t_end",
+    #                 ],
+    #             )
+    #             if not file_exists:
+    #                 writer.writeheader()
+    #             writer.writerows(self.latency_log)
+    #         # logger.info(f"Saved {len(self.latency_log)} latency entries to {log_path}")
+    #         self.latency_log.clear()
+    #     except Exception as e:
+    #         logger.error(f"Failed to save latency log: {e}")
 
     def cleanup(self):
         """
@@ -415,7 +415,8 @@ class Plugin:
         This happens either voluntarily or forced.
         if you have an gui or glfw window destroy it here.
         """
-        self._flush_latency_log_to_file()
+        # self._flush_latency_log_to_file()
+        pass
 
     # ------- do not change methods, properties below this line in your derived class
 
@@ -732,8 +733,8 @@ class Plugin_List:
                     p.deinit_ui()
                 p.cleanup()
                 # Fallback log saving in case super().cleanup() was not called
-                if hasattr(p, "_flush_latency_log_to_file"):
-                    p._flush_latency_log_to_file()
+                # if hasattr(p, "_flush_latency_log_to_file"):
+                #     p._flush_latency_log_to_file()
 
                 # logger.info(
                 #     f"Plugin {p.class_name} cleaned up at timestamp: {self.g_pool.get_timestamp()}"
