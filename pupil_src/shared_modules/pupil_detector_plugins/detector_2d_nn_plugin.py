@@ -220,11 +220,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         confidence_threshold: float = 0.6,
         show_confidence_graph: bool = True,
         enable_smoothing: bool = True,
-        smoothing_method: str = "ema",
+        smoothing_method: str = "one_euro",
         smooth_alpha: float = 0.4,
         one_euro_min_cutoff: float = 1.0,
         one_euro_beta: float = 0.01,
         properties: Optional[dict] = None,
+        flip_vertically = False,
+        flip_horizontally = False,
         **kwargs,
     ):
         super().__init__(g_pool=g_pool)
@@ -285,6 +287,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.clahe = cv2.createCLAHE(
             clipLimit=CLIP_LIMIT, tileGridSize=(TILE_GRID_SIZE, TILE_GRID_SIZE)
         )
+
+        self.flip_vertically = flip_vertically
+        self.flip_horizontally = flip_horizontally
 
         # Initial single-model VRAM loading
         if self.active_model != "2dcpp":
@@ -817,7 +822,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         table = float(COLOR_MAX) * (np.linspace(0, 1, COLOR_CAP) ** 0.8)
         img_gamma = cv2.LUT(img.astype(np.uint8), table.astype(np.uint8))
         img_clahe = self.clahe.apply(img_gamma)
-        pil_img = PIL.Image.fromarray(img_clahe)
+        if self.flip_vertically:
+            img_flipud = np.flipud(img_clahe)
+        else: img_flipud = img_clahe
+        if self.flip_horizontally:
+            img_fliplr = np.fliplr(img_flipud)
+        else: img_fliplr = img_flipud
+        pil_img = PIL.Image.fromarray(img_fliplr)
         return self.transform(pil_img)
 
     def _create_empty_datum(self, timestamp: float, raw_confidence: float = 0.0) -> Dict:
@@ -868,6 +879,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             )
         )
 
+
         self.menu.append(ui.Info_Text("Color Legend"))
         self.menu.append(
             ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_2D.as_float, "2D pupil ellipse")
@@ -896,6 +908,21 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 setter=self.set_smoothing_method,
                 getter=lambda: self.smoothing_method,
                 label="Smoothing Method",
+            )
+        )
+
+        self.menu.append(
+            ui.Switch(
+                "flip_vertically",
+                self,
+                label="Flip Vertically",
+            )
+        )
+        self.menu.append(
+            ui.Switch(
+                "flip_horizontally",
+                self,
+                label="Flip Horizontally",
             )
         )
 
@@ -1006,6 +1033,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         d["one_euro_min_cutoff"] = self.one_euro_min_cutoff
         d["one_euro_beta"] = self.one_euro_beta
         d["properties"] = self.__detector_2d.get_properties()
+        d["flip_vertically"] = self.flip_vertically
+        d["flip_horizontally"] = self.flip_horizontally
         return d
 
     def cleanup(self):
