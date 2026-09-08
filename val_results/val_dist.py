@@ -4,6 +4,7 @@ import glob
 import os
 from typing import Dict, List, Optional
 import numpy as np
+import re
 
 
 def find_latest_validation_csv(base_dir: Optional[str] = None) -> Optional[str]:
@@ -47,6 +48,9 @@ def main():
     with open(csvfile, "r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:  # DictReader starts directly on data rows (no need for i >= 1)
+            if re.search("#", str(row)):
+                note = str(row['date']).replace('# "','').replace('"','')
+                continue
             acc_str = row.get("accuracy_deg", "").strip()
             prec_str = row.get("precision_deg", "").strip()
             model = row.get("model", "unknown").strip()
@@ -78,7 +82,7 @@ def main():
         mean_prec = np.mean(stats["prec"])
         std_prec = np.std(stats["prec"])
         print(f"model: {model}, total {runs} runs, accuracy={mean_acc:.4f} ± {std_acc:.4f}, precision={mean_prec:.4f} ± {std_prec:.4f}")
-
+    print(note)
 
 if __name__ == "__main__":
     main()
