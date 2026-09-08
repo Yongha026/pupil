@@ -462,7 +462,7 @@ class Accuracy_Visualizer(Plugin):
             )
             os.makedirs(val_dir, exist_ok=True)
 
-            date_str = datetime.now().strftime("%y_%m_%d")
+            date_str = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
             filename = f"validation_results_{date_str}.csv"
             csv_path = os.path.join(val_dir, filename)
 
