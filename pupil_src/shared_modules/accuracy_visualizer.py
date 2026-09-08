@@ -213,6 +213,19 @@ class Accuracy_Visualizer(Plugin):
         self.succession_threshold = np.cos(np.deg2rad(0.5))
         self._outlier_threshold = outlier_threshold  # in degrees
 
+        # Logging dir
+        root_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
+        val_dir = os.environ.get(
+            "PUPIL_VALIDATION_DIR", os.path.join(root_dir, "val_results")
+        )
+        os.makedirs(val_dir, exist_ok=True)
+
+        date_str = datetime.now().strftime("%y_%m_%d")
+        filename = f"validation_results_{date_str}.csv"
+        self.csv_path = os.path.join(val_dir, filename)
+
     def init_ui(self):
         from pyglui import ui
 
@@ -448,25 +461,13 @@ class Accuracy_Visualizer(Plugin):
                     logger.debug(traceback.format_exc())
 
     def _export_validation_to_csv(self):
-        """Appends validation results to 'validation_results_YY_MM_DD.csv' in val_results directory."""
+        """Appends validation results to 'validation_results_YY_MM_DD_HH-MM-SS.csv' in val_results directory."""
         if not self.recent_input.is_complete or (self.accuracy is None and self.precision is None):
             logger.warning("No completed validation results available to export to CSV.")
             return
 
         try:
-            root_dir = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "..")
-            )
-            val_dir = os.environ.get(
-                "PUPIL_VALIDATION_DIR", os.path.join(root_dir, "val_results")
-            )
-            os.makedirs(val_dir, exist_ok=True)
-
-            date_str = datetime.now().strftime("%y-%m-%d_%H-%M-%S")
-            filename = f"validation_results_{date_str}.csv"
-            csv_path = os.path.join(val_dir, filename)
-
-            file_exists = os.path.exists(csv_path)
+            file_exists = os.path.exists(self.csv_path)
 
             fieldnames = [
                 "date",
@@ -532,14 +533,14 @@ class Accuracy_Visualizer(Plugin):
                 "status": status,
             }
 
-            with open(csv_path, "a", newline="", encoding="utf-8") as f:
+            with open(self.csv_path, "a", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 if not file_exists:
                     writer.writeheader()
                 writer.writerow(row)
 
             logger.info(
-                f"Validation result appended to {csv_path}: "
+                f"Validation result appended to {self.csv_path}: "
                 f"Accuracy={acc_val} deg, Precision={prec_val} deg (Model: {model_name})"
             )
         except Exception as e:

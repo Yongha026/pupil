@@ -123,13 +123,23 @@ def world(
     ]
 
     def detector_model_getter() -> str:
-        return str(getattr(g_pool, "pupil_detector_model", "pmrnet"))
+        return str(getattr(g_pool, "pupil_detector_model", "2dcpp"))
 
     def detector_model_setter(value: str):
         g_pool.pupil_detector_model = str(value)
         n = {"subject": "pupil_detector.set_model", "model": str(value)}
         ipc_pub.notify(n)
         logger.info(f"Broadcasted pupil detector model change to: {value}")
+
+    def detector_smoothing_getter() -> bool:
+        return bool(getattr(g_pool, "pupil_detector_smoothing", True))
+
+    def detector_smoothing_setter(value: bool):
+        is_on = bool(value)
+        g_pool.pupil_detector_smoothing = is_on
+        n = {"subject": "pupil_detector.set_smoothing", "value": is_on}
+        ipc_pub.notify(n)
+        logger.info(f"Broadcasted pupil detector smoothing change to: {is_on}")
 
     try:
         from background_helper import IPC_Logging_Task_Proxy
@@ -498,7 +508,10 @@ def world(
             session_settings.get("pupil_detection_enabled", True)
         )
         g_pool.pupil_detector_model = str(
-            session_settings.get("pupil_detector_model", "pmrnet")
+            session_settings.get("pupil_detector_model", "2dcpp")
+        )
+        g_pool.pupil_detector_smoothing = bool(
+            session_settings.get("pupil_detector_smoothing", True)
         )
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
@@ -514,6 +527,9 @@ def world(
             elif subject == "pupil_detector.set_model":
                 g_pool.pupil_detector_model = noti["model"]
                 session_settings["pupil_detector_model"] = noti["model"]
+            elif subject == "pupil_detector.set_smoothing":
+                g_pool.pupil_detector_smoothing = bool(noti["value"])
+                session_settings["pupil_detector_smoothing"] = bool(noti["value"])
             elif subject == "start_plugin":
                 try:
                     g_pool.plugins.add(
@@ -534,7 +550,11 @@ def world(
                 ipc_pub.notify(noti)
                 ipc_pub.notify({
                     "subject": "pupil_detector.set_model",
-                    "model": getattr(g_pool, "pupil_detector_model", "pmrnet"),
+                    "model": getattr(g_pool, "pupil_detector_model", "2dcpp"),
+                })
+                ipc_pub.notify({
+                    "subject": "pupil_detector.set_smoothing",
+                    "value": getattr(g_pool, "pupil_detector_smoothing", True),
                 })
             elif subject == "set_min_calibration_confidence":
                 g_pool.min_calibration_confidence = noti["value"]
@@ -661,6 +681,14 @@ def world(
                 getter=detector_model_getter,
                 setter=detector_model_setter,
                 label="Detector model",
+            )
+        )
+        general_settings.append(
+            ui.Switch(
+                "pupil_detector_smoothing",
+                label="Enable smoothing",
+                getter=detector_smoothing_getter,
+                setter=detector_smoothing_setter,
             )
         )
         general_settings.append(
@@ -880,7 +908,7 @@ def world(
         ] = g_pool.min_calibration_confidence
         session_settings["pupil_detection_enabled"] = g_pool.pupil_detection_enabled
         session_settings["pupil_detector_model"] = getattr(
-            g_pool, "pupil_detector_model", "pmrnet"
+            g_pool, "pupil_detector_model", "2dcpp"
         )
         session_settings["audio_mode"] = audio.get_audio_mode()
 

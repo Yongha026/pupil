@@ -86,6 +86,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         active_model: str = "adgbc",
         confidence_threshold: float = 0.6,
         show_confidence_graph: bool = True,
+        enable_smoothing: bool = True,
+        smooth_alpha: float = 0.4,
         properties: Optional[dict] = None,
         **kwargs,
     ):
@@ -105,6 +107,14 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.active_model = active_model
         self.confidence_threshold = float(confidence_threshold)
         self.show_confidence_graph = bool(show_confidence_graph)
+
+        self._enable_smoothing = bool(enable_smoothing)
+        if hasattr(self.g_pool, "pupil_detector_smoothing"):
+            self._enable_smoothing = bool(self.g_pool.pupil_detector_smoothing)
+        self.smooth_alpha = float(smooth_alpha)
+        self._prev_ellipse = None
+        self._consecutive_jumps = 0
+
         self.conf_graph = None
         self.conf_grad = None
         self.conf_grad_limits = (0.0, 1.0)
@@ -264,6 +274,28 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         model.eval()
         logger.info(f"Successfully loaded {model_name_tag} weights from {ckpt_path}")
 
+    @property
+    def enable_smoothing(self) -> bool:
+        return self._enable_smoothing
+
+    @enable_smoothing.setter
+    def enable_smoothing(self, value: bool):
+        self.set_smoothing(value, broadcast=True)
+
+    def set_smoothing(self, value: bool, broadcast: bool = True):
+        new_val = bool(value)
+        if hasattr(self, "_enable_smoothing") and new_val == self._enable_smoothing and self._prev_ellipse is None:
+            return
+        self._enable_smoothing = new_val
+        self._prev_ellipse = None
+        self._consecutive_jumps = 0
+
+        if hasattr(self.g_pool, "pupil_detector_smoothing"):
+            self.g_pool.pupil_detector_smoothing = new_val
+
+        if broadcast:
+            self.notify_all({"subject": "pupil_detector.set_smoothing", "value": new_val})
+
     def set_active_model(self, model_name: str, broadcast: bool = True):
         """
         Switch active model: Purge previous model from VRAM and load the selected one.
@@ -274,6 +306,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         logger.info(f"Switching pupil detector model to '{model_name}'...")
         self._unload_current_model()
         self.active_model = model_name
+        self._prev_ellipse = None
+        self._consecutive_jumps = 0
 
         if hasattr(self.g_pool, "pupil_detector_model"):
             self.g_pool.pupil_detector_model = model_name
@@ -286,12 +320,18 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
     def on_notify(self, notification):
         super().on_notify(notification)
-        if notification.get("subject") == "pupil_detector.set_model":
+        subject = notification.get("subject")
+        if subject == "pupil_detector.set_model":
             model_name = notification.get("model")
             if model_name in self.model_keys:
                 if model_name != self.active_model or (self.model is None and model_name != "2dcpp"):
                     logger.info(f"Received model switch notification to '{model_name}'")
                     self.set_active_model(model_name, broadcast=False)
+        elif subject == "pupil_detector.set_smoothing":
+            new_val = bool(notification.get("value", True))
+            if new_val != self._enable_smoothing:
+                logger.info(f"Received pupil detector smoothing change: {new_val}")
+                self.set_smoothing(new_val, broadcast=False)
 
     # -------------------------------------------------------------------------
     # Detection Loop
@@ -421,6 +461,11 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         pupil_mask = np.zeros_like(pred, dtype=np.uint8)
         pupil_mask[pupil_pixels] = 255
 
+        if self._enable_smoothing:
+            # 1. Anti-aliasing Gaussian blur & thresholding to smooth discrete pixel staircase
+            pupil_mask = cv2.GaussianBlur(pupil_mask, (5, 5), 0)
+            _, pupil_mask = cv2.threshold(pupil_mask, 127, 255, cv2.THRESH_BINARY)
+
         # Fit ellipse to pupil contour
         contours, _ = cv2.findContours(
             pupil_mask,
@@ -429,13 +474,68 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         )
 
         if not contours:
+            self._prev_ellipse = None
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         best_contour = max(contours, key=cv2.contourArea)
         if len(best_contour) < 5:
+            self._prev_ellipse = None
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
-        (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
+        ellipse = cv2.fitEllipse(best_contour)
+        (cx, cy), (d1, d2), angle_deg = ellipse
+
+        # Guarantee axes[0] is minor_diameter and axes[1] is major_diameter (axes[0] <= axes[1])
+        if d1 > d2:
+            minor_d = float(d2)
+            major_d = float(d1)
+            angle_deg = (angle_deg + 90.0) % 180.0
+        else:
+            minor_d = float(d1)
+            major_d = float(d2)
+            angle_deg = angle_deg % 180.0
+
+        area = cv2.contourArea(best_contour)
+        aspect_ratio = minor_d / (major_d + 1e-6)
+
+        # 2. Blink & noise rejection filter (reject when eye is almost closed or area is tiny)
+        if aspect_ratio < 0.20 or area < 15.0:
+            self._prev_ellipse = None
+            return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
+
+        # 3. Temporal Outlier Gating (Jump Rejection) & EMA Smoothing
+        if self._enable_smoothing:
+            if self._prev_ellipse is not None:
+                p_c, p_ax, p_ang = self._prev_ellipse
+                dist = np.sqrt((cx - p_c[0]) ** 2 + (cy - p_c[1]) ** 2)
+                if dist > 40.0:
+                    self._consecutive_jumps += 1
+                    if self._consecutive_jumps < 5:
+                        raw_conf = 0.0
+                        cx, cy = p_c
+                        minor_d, major_d = p_ax
+                        angle_deg = p_ang
+                    else:
+                        self._consecutive_jumps = 0
+                else:
+                    self._consecutive_jumps = 0
+
+                a = self.smooth_alpha
+                cx = a * cx + (1.0 - a) * p_c[0]
+                cy = a * cy + (1.0 - a) * p_c[1]
+                minor_d = a * minor_d + (1.0 - a) * p_ax[0]
+                major_d = a * major_d + (1.0 - a) * p_ax[1]
+
+                # Continuous circular angle smoothing (mod 180 deg)
+                diff_ang = (angle_deg - p_ang + 90.0) % 180.0 - 90.0
+                angle_deg = (p_ang + a * diff_ang) % 180.0
+            else:
+                self._consecutive_jumps = 0
+
+            self._prev_ellipse = ((cx, cy), (minor_d, major_d), angle_deg)
+        else:
+            self._prev_ellipse = None
+            self._consecutive_jumps = 0
 
         if raw_conf < self.confidence_threshold:
             confidence = 0.0
@@ -455,11 +555,11 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         result = {
             "location": (float(cx), float(cy)),
-            "diameter": float(MA),
+            "diameter": float(major_d),
             "confidence": float(confidence),
             "raw_confidence": float(raw_conf),
             "ellipse": {
-                "axes": (float(MA), float(ma)),
+                "axes": (float(minor_d), float(major_d)),
                 "angle": float(angle_deg),
                 "center": (float(cx), float(cy)),
             },
@@ -578,6 +678,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 label="Show Confidence Graph",
             )
         )
+        self.menu.append(
+            ui.Switch(
+                "enable_smoothing",
+                self,
+                label="Enable Smoothing",
+            )
+        )
 
         # Set up confidence performance graph (matching system_graphs.py)
         eye_id = getattr(self.g_pool, "eye_id", 0)
@@ -680,6 +787,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         d["active_model"] = self.active_model
         d["confidence_threshold"] = self.confidence_threshold
         d["show_confidence_graph"] = self.show_confidence_graph
+        d["enable_smoothing"] = self.enable_smoothing
+        d["smooth_alpha"] = self.smooth_alpha
         d["properties"] = self.__detector_2d.get_properties()
         return d
 

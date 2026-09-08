@@ -1,3 +1,5 @@
 26.09.07
-model: pmrnet, accuracy=1.8270 ± 0.1697, precision=0.2397 ± 0.0111
-model: 2dcpp, accuracy=1.6605 ± 0.1426, precision=0.1784 ± 0.0025
+model: pmrnet, total 5 runs, accuracy=1.8270 ± 0.1697, precision=0.2397 ± 0.0111
+model: 2dcpp, total 5 runs, accuracy=1.6605 ± 0.1426, precision=0.1784 ± 0.0025
+26.09.08
+model: adgbc, total 5 runs, accuracy=1.9719 ± 0.2413, precision=0.2496 ± 0.0064

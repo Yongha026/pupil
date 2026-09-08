@@ -110,8 +110,8 @@ class ScreenMarkerChoreographyPlugin(
 
     def get_list_of_markers_to_show(self, mode: ChoreographyMode) -> list:
         if ChoreographyMode.CALIBRATION == mode:
-            pattern = getattr(self, "calibration_pattern", "12-Point (4x3 Dense Grid / New)")
-            return list(self.CALIBRATION_PATTERNS.get(pattern, self.CALIBRATION_PATTERNS["12-Point (4x3 Dense Grid / New)"]))
+            pattern = getattr(self, "calibration_pattern", "9-Point (3x3 Grid / Ours)")
+            return list(self.CALIBRATION_PATTERNS.get(pattern, self.CALIBRATION_PATTERNS["9-Point (3x3 Grid / Ours)"]))
         if ChoreographyMode.VALIDATION == mode:
             pattern = getattr(self, "validation_pattern", "Diamond (Inward Cross / Default)")
             return list(self.VALIDATION_PATTERNS.get(pattern, self.VALIDATION_PATTERNS["Diamond (Inward Cross / Default)"]))
@@ -121,10 +121,10 @@ class ScreenMarkerChoreographyPlugin(
         self,
         g_pool,
         fullscreen=True,
-        marker_scale=1.0,
-        sample_duration=60,
+        marker_scale=2.0,
+        sample_duration=30,
         monitor_name=None,
-        calibration_pattern="12-Point (4x3 Dense Grid / New)",
+        calibration_pattern="9-Point (3x3 Grid / Ours)",
         validation_pattern="Diamond (Inward Cross / Default)",
         **kwargs,
     ):
