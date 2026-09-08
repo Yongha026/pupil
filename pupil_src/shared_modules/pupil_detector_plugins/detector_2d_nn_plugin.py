@@ -1,6 +1,7 @@
 import csv
 import gc
 import logging
+import math
 import os
 import time
 from typing import Dict, List, Optional, Tuple
@@ -52,6 +53,138 @@ AVAILABLE_MODELS: List[Tuple[str, str]] = [
     ("2dcpp", "Classic C++ (2D)"),
 ]
 
+SMOOTHING_METHODS: List[Tuple[str, str]] = [
+    ("ema", "EMA (Heuristic)"),
+    ("one_euro", "One-Euro Filter"),
+]
+
+
+class OneEuroFilter:
+    """
+    1€ Filter: A simple speed-based low-pass filter for noisy input in interactive systems.
+    Reference: Casiez, Roussel, Vogel (CHI 2012).
+    """
+
+    def __init__(
+        self,
+        min_cutoff: float = 1.0,
+        beta: float = 0.01,
+        d_cutoff: float = 1.0,
+    ):
+        self.min_cutoff = float(min_cutoff)
+        self.beta = float(beta)
+        self.d_cutoff = float(d_cutoff)
+        self.x_prev: Optional[float] = None
+        self.dx_prev: float = 0.0
+        self.t_prev: Optional[float] = None
+
+    @staticmethod
+    def _alpha(rate: float, cutoff: float) -> float:
+        if rate <= 0.0 or cutoff <= 0.0:
+            return 1.0
+        tau = 1.0 / (2.0 * math.pi * cutoff)
+        te = 1.0 / rate
+        return 1.0 / (1.0 + tau / te)
+
+    def filter(self, x: float, timestamp: Optional[float] = None) -> float:
+        x = float(x)
+        if self.x_prev is None:
+            self.x_prev = x
+            self.dx_prev = 0.0
+            self.t_prev = float(timestamp) if timestamp is not None and timestamp > 0 else None
+            return self.x_prev
+
+        if timestamp is not None and timestamp > 0 and self.t_prev is not None and self.t_prev > 0:
+            dt = timestamp - self.t_prev
+            if dt > 1e-4:
+                rate = 1.0 / dt
+            else:
+                rate = 60.0
+            if dt > 1.0:
+                self.reset()
+                self.x_prev = x
+                self.t_prev = float(timestamp)
+                return self.x_prev
+        else:
+            rate = 60.0
+
+        self.t_prev = float(timestamp) if timestamp is not None and timestamp > 0 else None
+
+        # 1. Estimate and low-pass filter derivative (velocity)
+        dx = (x - self.x_prev) * rate
+        alpha_d = self._alpha(rate, self.d_cutoff)
+        dx_hat = alpha_d * dx + (1.0 - alpha_d) * self.dx_prev
+        self.dx_prev = dx_hat
+
+        # 2. Dynamically adapt cutoff frequency based on velocity
+        cutoff = self.min_cutoff + self.beta * abs(dx_hat)
+        alpha = self._alpha(rate, cutoff)
+
+        # 3. Filter signal
+        x_hat = alpha * x + (1.0 - alpha) * self.x_prev
+        self.x_prev = x_hat
+        return x_hat
+
+    def reset(self):
+        self.x_prev = None
+        self.dx_prev = 0.0
+        self.t_prev = None
+
+
+class EllipseOneEuroFilter:
+    """
+    Multi-dimensional 1€ filter for pupil ellipse parameters:
+    (cx, cy, minor_diameter, major_diameter, angle_deg)
+    with circular angle unwrapping.
+    """
+
+    def __init__(
+        self,
+        min_cutoff: float = 1.0,
+        beta: float = 0.01,
+        d_cutoff: float = 1.0,
+    ):
+        self.f_cx = OneEuroFilter(min_cutoff=min_cutoff, beta=beta, d_cutoff=d_cutoff)
+        self.f_cy = OneEuroFilter(min_cutoff=min_cutoff, beta=beta, d_cutoff=d_cutoff)
+        self.f_minor = OneEuroFilter(min_cutoff=min_cutoff, beta=beta * 0.5, d_cutoff=d_cutoff)
+        self.f_major = OneEuroFilter(min_cutoff=min_cutoff, beta=beta * 0.5, d_cutoff=d_cutoff)
+        self.f_angle = OneEuroFilter(min_cutoff=min_cutoff, beta=beta, d_cutoff=d_cutoff)
+
+    def filter(
+        self,
+        cx: float,
+        cy: float,
+        minor_d: float,
+        major_d: float,
+        angle_deg: float,
+        timestamp: Optional[float] = None,
+    ) -> Tuple[float, float, float, float, float]:
+        cx_hat = self.f_cx.filter(cx, timestamp)
+        cy_hat = self.f_cy.filter(cy, timestamp)
+        minor_hat = self.f_minor.filter(minor_d, timestamp)
+        major_hat = self.f_major.filter(major_d, timestamp)
+
+        if self.f_angle.x_prev is None:
+            angle_hat = self.f_angle.filter(angle_deg, timestamp) % 180.0
+        else:
+            prev_ang_base = self.f_angle.x_prev
+            prev_ang_norm = prev_ang_base % 180.0
+            diff_ang = (angle_deg - prev_ang_norm + 90.0) % 180.0 - 90.0
+            unwrapped = prev_ang_base + diff_ang
+            filtered_ang = self.f_angle.filter(unwrapped, timestamp)
+            angle_hat = filtered_ang % 180.0
+            if abs(self.f_angle.x_prev) > 3600.0:
+                self.f_angle.x_prev = angle_hat
+
+        return cx_hat, cy_hat, minor_hat, major_hat, angle_hat
+
+    def reset(self):
+        self.f_cx.reset()
+        self.f_cy.reset()
+        self.f_minor.reset()
+        self.f_major.reset()
+        self.f_angle.reset()
+
 
 class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     """
@@ -87,7 +220,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         confidence_threshold: float = 0.6,
         show_confidence_graph: bool = True,
         enable_smoothing: bool = True,
+        smoothing_method: str = "ema",
         smooth_alpha: float = 0.4,
+        one_euro_min_cutoff: float = 1.0,
+        one_euro_beta: float = 0.01,
         properties: Optional[dict] = None,
         **kwargs,
     ):
@@ -111,9 +247,21 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self._enable_smoothing = bool(enable_smoothing)
         if hasattr(self.g_pool, "pupil_detector_smoothing"):
             self._enable_smoothing = bool(self.g_pool.pupil_detector_smoothing)
+
+        self._smoothing_method = str(smoothing_method)
+        if hasattr(self.g_pool, "pupil_detector_smoothing_method"):
+            self._smoothing_method = str(self.g_pool.pupil_detector_smoothing_method)
+
         self.smooth_alpha = float(smooth_alpha)
+        self.one_euro_min_cutoff = float(one_euro_min_cutoff)
+        self.one_euro_beta = float(one_euro_beta)
+
         self._prev_ellipse = None
         self._consecutive_jumps = 0
+        self._one_euro_filter = EllipseOneEuroFilter(
+            min_cutoff=self.one_euro_min_cutoff,
+            beta=self.one_euro_beta,
+        )
 
         self.conf_graph = None
         self.conf_grad = None
@@ -124,6 +272,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         self.model_keys = [k for k, _ in AVAILABLE_MODELS]
         self.model_labels = [label for _, label in AVAILABLE_MODELS]
+
+        self.smoothing_method_keys = [k for k, _ in SMOOTHING_METHODS]
+        self.smoothing_method_labels = [label for _, label in SMOOTHING_METHODS]
 
         self.transform = torchvision.transforms.Compose(
             [
@@ -289,12 +440,38 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self._enable_smoothing = new_val
         self._prev_ellipse = None
         self._consecutive_jumps = 0
+        if hasattr(self, "_one_euro_filter"):
+            self._one_euro_filter.reset()
 
         if hasattr(self.g_pool, "pupil_detector_smoothing"):
             self.g_pool.pupil_detector_smoothing = new_val
 
         if broadcast:
             self.notify_all({"subject": "pupil_detector.set_smoothing", "value": new_val})
+
+    @property
+    def smoothing_method(self) -> str:
+        return self._smoothing_method
+
+    @smoothing_method.setter
+    def smoothing_method(self, value: str):
+        self.set_smoothing_method(value, broadcast=True)
+
+    def set_smoothing_method(self, method: str, broadcast: bool = True):
+        method_str = str(method)
+        if hasattr(self, "_smoothing_method") and method_str == self._smoothing_method and self._prev_ellipse is None:
+            return
+        self._smoothing_method = method_str
+        self._prev_ellipse = None
+        self._consecutive_jumps = 0
+        if hasattr(self, "_one_euro_filter"):
+            self._one_euro_filter.reset()
+
+        if hasattr(self.g_pool, "pupil_detector_smoothing_method"):
+            self.g_pool.pupil_detector_smoothing_method = method_str
+
+        if broadcast:
+            self.notify_all({"subject": "pupil_detector.set_smoothing_method", "method": method_str})
 
     def set_active_model(self, model_name: str, broadcast: bool = True):
         """
@@ -308,6 +485,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.active_model = model_name
         self._prev_ellipse = None
         self._consecutive_jumps = 0
+        if hasattr(self, "_one_euro_filter"):
+            self._one_euro_filter.reset()
 
         if hasattr(self.g_pool, "pupil_detector_model"):
             self.g_pool.pupil_detector_model = model_name
@@ -332,6 +511,11 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             if new_val != self._enable_smoothing:
                 logger.info(f"Received pupil detector smoothing change: {new_val}")
                 self.set_smoothing(new_val, broadcast=False)
+        elif subject == "pupil_detector.set_smoothing_method":
+            new_method = str(notification.get("method", "ema"))
+            if new_method != self._smoothing_method:
+                logger.info(f"Received pupil detector smoothing method change: {new_method}")
+                self.set_smoothing_method(new_method, broadcast=False)
 
     # -------------------------------------------------------------------------
     # Detection Loop
@@ -475,11 +659,15 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         if not contours:
             self._prev_ellipse = None
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         best_contour = max(contours, key=cv2.contourArea)
         if len(best_contour) < 5:
             self._prev_ellipse = None
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         ellipse = cv2.fitEllipse(best_contour)
@@ -501,9 +689,11 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         # 2. Blink & noise rejection filter (reject when eye is almost closed or area is tiny)
         if aspect_ratio < 0.20 or area < 15.0:
             self._prev_ellipse = None
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
-        # 3. Temporal Outlier Gating (Jump Rejection) & EMA Smoothing
+        # 3. Temporal Outlier Gating (Jump Rejection) & Smoothing (EMA or One-Euro Filter)
         if self._enable_smoothing:
             if self._prev_ellipse is not None:
                 p_c, p_ax, p_ang = self._prev_ellipse
@@ -520,22 +710,34 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 else:
                     self._consecutive_jumps = 0
 
-                a = self.smooth_alpha
-                cx = a * cx + (1.0 - a) * p_c[0]
-                cy = a * cy + (1.0 - a) * p_c[1]
-                minor_d = a * minor_d + (1.0 - a) * p_ax[0]
-                major_d = a * major_d + (1.0 - a) * p_ax[1]
+                if self._smoothing_method == "one_euro":
+                    cx, cy, minor_d, major_d, angle_deg = self._one_euro_filter.filter(
+                        cx, cy, minor_d, major_d, angle_deg, frame.timestamp
+                    )
+                else:
+                    a = self.smooth_alpha
+                    cx = a * cx + (1.0 - a) * p_c[0]
+                    cy = a * cy + (1.0 - a) * p_c[1]
+                    minor_d = a * minor_d + (1.0 - a) * p_ax[0]
+                    major_d = a * major_d + (1.0 - a) * p_ax[1]
 
-                # Continuous circular angle smoothing (mod 180 deg)
-                diff_ang = (angle_deg - p_ang + 90.0) % 180.0 - 90.0
-                angle_deg = (p_ang + a * diff_ang) % 180.0
+                    # Continuous circular angle smoothing (mod 180 deg)
+                    diff_ang = (angle_deg - p_ang + 90.0) % 180.0 - 90.0
+                    angle_deg = (p_ang + a * diff_ang) % 180.0
             else:
                 self._consecutive_jumps = 0
+                if self._smoothing_method == "one_euro":
+                    self._one_euro_filter.reset()
+                    cx, cy, minor_d, major_d, angle_deg = self._one_euro_filter.filter(
+                        cx, cy, minor_d, major_d, angle_deg, frame.timestamp
+                    )
 
             self._prev_ellipse = ((cx, cy), (minor_d, major_d), angle_deg)
         else:
             self._prev_ellipse = None
             self._consecutive_jumps = 0
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
 
         if raw_conf < self.confidence_threshold:
             confidence = 0.0
@@ -685,6 +887,17 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 label="Enable Smoothing",
             )
         )
+        self.menu.append(
+            ui.Selector(
+                "smoothing_method",
+                self,
+                selection=self.smoothing_method_keys,
+                labels=self.smoothing_method_labels,
+                setter=self.set_smoothing_method,
+                getter=lambda: self.smoothing_method,
+                label="Smoothing Method",
+            )
+        )
 
         # Set up confidence performance graph (matching system_graphs.py)
         eye_id = getattr(self.g_pool, "eye_id", 0)
@@ -788,7 +1001,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         d["confidence_threshold"] = self.confidence_threshold
         d["show_confidence_graph"] = self.show_confidence_graph
         d["enable_smoothing"] = self.enable_smoothing
+        d["smoothing_method"] = self.smoothing_method
         d["smooth_alpha"] = self.smooth_alpha
+        d["one_euro_min_cutoff"] = self.one_euro_min_cutoff
+        d["one_euro_beta"] = self.one_euro_beta
         d["properties"] = self.__detector_2d.get_properties()
         return d
 
