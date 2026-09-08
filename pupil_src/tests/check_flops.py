@@ -28,7 +28,7 @@ device = torch.device(device_str)
 
 
 
-model_path_adgbc = os.path.join(plugin_dir, "adgbc_nn_best.pth")
+model_path_adgbc = os.path.join(plugin_dir, "adgbc_s_nn_best.pth")
 model_path_ritnet_orig = os.path.join(plugin_dir, "best_model.pkl")
 model_path_nn_ritnet = os.path.join(plugin_dir, "ritnet_nn_best.pth")
 model_path_nn_unext = os.path.join(plugin_dir, "unext_nn_best.pth")
@@ -42,7 +42,7 @@ if args.DETECT_MODEL == "adgbc":
     # 1) AD-GBC Model
     import adgbc
     try:
-        model = adgbc.GBC_Rolling_Unet_L(num_classes=4, input_channels=1, deep_supervision=False).to(device)
+        model = adgbc.GBC_Rolling_Unet_S(num_classes=4, input_channels=1, deep_supervision=False).to(device)
         if os.path.exists(model_path_adgbc):
             checkpoint = torch.load(model_path_adgbc, map_location=device, weights_only=False)
             state_dict = checkpoint["network_weights"] if (isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint

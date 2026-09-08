@@ -13,7 +13,7 @@ PMR="pmr_nn_best.pth"
 if [ -f "$ADGBC" ]; then
   echo "Already have ckpt for AD-GBC"
 else
-  gdown 1V_bRnKT8cErFppsdRrX4R0hXdf_RnwLB
+  gdown 1D8RmN2SVuBoxVvVezniCnYxxhABUiuaO
   echo "Downloaded ckpt for AD-GBC"
 fi
 

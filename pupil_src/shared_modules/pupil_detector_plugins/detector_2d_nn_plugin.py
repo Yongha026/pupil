@@ -83,7 +83,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     def __init__(
         self,
         g_pool=None,
-        active_model: str = "2dcpp",
+        active_model: str = "adgbc",
         confidence_threshold: float = 0.6,
         show_confidence_graph: bool = True,
         properties: Optional[dict] = None,
@@ -236,7 +236,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
             elif model_name == "adgbc":
                 ckpt_path = os.path.join(self.ckpt_dir, "adgbc_nn_best.pth")
-                model = adgbc.GBC_Rolling_Unet_L(
+                model = adgbc.GBC_Rolling_Unet_S(
                     num_classes=4, input_channels=1, deep_supervision=False
                 ).to(self.device)
                 self._load_state_dict(model, ckpt_path, "AD-GBC")
