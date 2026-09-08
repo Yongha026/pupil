@@ -1,0 +1,109 @@
+                 /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/unext_nn_best.pth                                                                       
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded UNeXt weights from                                                                           detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/unext_nn_best.pth                                                                       
+[13:37:23] WARNING  world - launchables.world: Resetting all settings and restarting Capture.                                                                                                             world.py:608
+Clearing /home/byeongjun/PycharmProjects/pupil_nnunets/capture_settings/user_settings_eye1...
+Clearing /home/byeongjun/PycharmProjects/pupil_nnunets/capture_settings/user_settings_eye0...
+Clearing /home/byeongjun/PycharmProjects/pupil_nnunets/capture_settings/user_settings_world...
+[13:37:25] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+[13:37:32] INFO     world - launchables.world: Broadcasted pupil detector model change to: pmrnet                                                                                                         world.py:132
+[13:37:33] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:179
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:179
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to '2dcpp'                                                                    detector_2d_nn_plugin.py:328
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to '2dcpp'...                                                                     detector_2d_nn_plugin.py:306
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to '2dcpp'                                                                    detector_2d_nn_plugin.py:328
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to '2dcpp'...                                                                     detector_2d_nn_plugin.py:306
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'pmrnet'                                                                   detector_2d_nn_plugin.py:328
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'pmrnet'...                                                                    detector_2d_nn_plugin.py:306
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'pmrnet' onto cuda...                                                                                    detector_2d_nn_plugin.py:179
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'pmrnet'                                                                   detector_2d_nn_plugin.py:328
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'pmrnet'...                                                                    detector_2d_nn_plugin.py:306
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded PMRNet weights from                                                                          detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/pmr_nn_best.pth                                                                         
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'pmrnet' onto cuda...                                                                                    detector_2d_nn_plugin.py:179
+[13:37:34] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded PMRNet weights from                                                                          detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/pmr_nn_best.pth                                                                         
+[13:37:38] INFO     world - launchables.world: Broadcasted pupil detector model change to: nn_unext                                                                                                       world.py:132
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'nn_unext'                                                                 detector_2d_nn_plugin.py:328
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'nn_unext'...                                                                  detector_2d_nn_plugin.py:306
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'nn_unext'                                                                 detector_2d_nn_plugin.py:328
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'nn_unext'...                                                                  detector_2d_nn_plugin.py:306
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'nn_unext' onto cuda...                                                                                  detector_2d_nn_plugin.py:179
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'nn_unext' onto cuda...                                                                                  detector_2d_nn_plugin.py:179
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded UNeXt weights from                                                                           detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/unext_nn_best.pth                                                                       
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded UNeXt weights from                                                                           detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/unext_nn_best.pth                                                                       
+[13:37:54] INFO     world - launchables.world: Broadcasted pupil detector model change to: adgbc                                                                                                          world.py:132
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'adgbc'                                                                    detector_2d_nn_plugin.py:328
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'adgbc'...                                                                     detector_2d_nn_plugin.py:306
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Received model switch notification to 'adgbc'                                                                    detector_2d_nn_plugin.py:328
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Switching pupil detector model to 'adgbc'...                                                                     detector_2d_nn_plugin.py:306
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:179
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:179
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:275
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+[13:38:35] INFO     world - calibration_choreography.base_plugin: Starting  Calibration                                                                                                             base_plugin.py:628
+[13:38:54] INFO     world - calibration_choreography.base_plugin: Stopping  Calibration                                                                                                             base_plugin.py:667
+`ftol` termination condition is satisfied.
+Function evaluations 23, initial cost 3.7123e+01, final cost 1.9579e+00, first-order optimality 4.89e-05.
+`ftol` termination condition is satisfied.
+Function evaluations 13, initial cost 7.3826e+00, final cost 1.6475e+00, first-order optimality 1.89e-05.
+`ftol` termination condition is satisfied.
+Function evaluations 18, initial cost 3.1898e+01, final cost 5.0905e+00, first-order optimality 2.57e-04.
+           INFO     world - accuracy_visualizer: Angular accuracy: 1.862 degrees                                                                                                            accuracy_visualizer.py:440
+           INFO     world - accuracy_visualizer: Angular precision: 0.190 degrees                                                                                                           accuracy_visualizer.py:449
+[13:38:56] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[13:39:05] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - accuracy_visualizer: Angular accuracy: 2.161 degrees                                                                                                            accuracy_visualizer.py:440
+           INFO     world - accuracy_visualizer: Angular precision: 0.180 degrees                                                                                                           accuracy_visualizer.py:449
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_08.csv: Accuracy=2.1611   accuracy_visualizer.py:542
+                    deg, Precision=0.1802 deg (Model: adgbc)                                                                                                                                                          
+[13:39:06] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[13:39:14] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           WARNING  world - accuracy_visualizer: Not enough data available for angular accuracy calculation.                                                                                accuracy_visualizer.py:435
+           INFO     world - accuracy_visualizer: Angular precision: 0.173 degrees                                                                                                           accuracy_visualizer.py:449
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_08.csv: Accuracy= deg,    accuracy_visualizer.py:542
+                    Precision=0.1729 deg (Model: adgbc)                                                                                                                                                               
+[13:39:15] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[13:39:24] INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           WARNING  world - accuracy_visualizer: Not enough data available for angular accuracy calculation.                                                                                accuracy_visualizer.py:435
+           INFO     world - accuracy_visualizer: Angular precision: 0.187 degrees                                                                                                           accuracy_visualizer.py:449
+           INFO     world - accuracy_visualizer: Validation result appended to /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/validation_results_26_09_08.csv: Accuracy= deg,    accuracy_visualizer.py:542
+                    Precision=0.1867 deg (Model: adgbc)                                                                                                                                                               
+[13:39:36] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:175
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.  
+
