@@ -82,7 +82,10 @@ def main():
         mean_prec = np.mean(stats["prec"])
         std_prec = np.std(stats["prec"])
         print(f"model: {model}, total {runs} runs, accuracy={mean_acc:.4f} ± {std_acc:.4f}, precision={mean_prec:.4f} ± {std_prec:.4f}")
-    print(note)
+    try:
+        print(note)
+    except:
+        pass
 
 if __name__ == "__main__":
     main()
