@@ -372,7 +372,8 @@ class Detector2DPlugin(PupilDetectorPlugin):
                     "ellipse": {"axes": (0.0, 0.0), "angle": 0.0, "center": (0.0, 0.0)},
                 }
             else:
-                (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(best_contour)
+                hull = cv2.convexHull(best_contour)
+                (cx, cy), (MA, ma), angle_deg = cv2.fitEllipse(hull)
                 result = {
                     "location": (float(cx), float(cy)),
                     "diameter": float(MA),
