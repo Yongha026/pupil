@@ -260,6 +260,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.one_euro_beta = float(one_euro_beta)
 
         self._prev_ellipse = None
+        self._last_raw_center: Optional[Tuple[float, float]] = None
         self._consecutive_jumps = 0
         self._one_euro_filter = EllipseOneEuroFilter(
             min_cutoff=self.one_euro_min_cutoff,
@@ -497,6 +498,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self._unload_current_model()
         self.active_model = model_name
         self._prev_ellipse = None
+        self._last_raw_center = None
         self._consecutive_jumps = 0
         if hasattr(self, "_one_euro_filter"):
             self._one_euro_filter.reset()
@@ -672,6 +674,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         if not contours:
             self._prev_ellipse = None
+            self._last_raw_center = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
@@ -679,6 +682,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         best_contour = max(contours, key=cv2.contourArea)
         if len(best_contour) < 5:
             self._prev_ellipse = None
+            self._last_raw_center = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
@@ -702,9 +706,19 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         # 2. Blink & noise rejection filter (reject when eye is almost closed or area is tiny)
         if aspect_ratio < 0.20 or area < 15.0:
             self._prev_ellipse = None
+            self._last_raw_center = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
+
+        # ------------------------------------------------------------------
+        # Snapshot raw (pre-smoothing) ellipse values for diagnostic logging
+        # ------------------------------------------------------------------
+        raw_cx = float(cx)
+        raw_cy = float(cy)
+        raw_minor = float(minor_d)
+        raw_major = float(major_d)
+        raw_angle = float(angle_deg)
 
         # 3. Temporal Outlier Gating (Jump Rejection) & Smoothing (EMA or One-Euro Filter)
         if self._enable_smoothing:
@@ -752,6 +766,14 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
 
+        # Compute instantaneous pixel jitter from raw (pre-smoothing) center
+        if self._last_raw_center is not None:
+            pixel_jitter = float(np.hypot(raw_cx - self._last_raw_center[0],
+                                          raw_cy - self._last_raw_center[1]))
+        else:
+            pixel_jitter = 0.0
+        self._last_raw_center = (raw_cx, raw_cy)
+
         if raw_conf < self.confidence_threshold:
             confidence = 0.0
         else:
@@ -793,6 +815,14 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         datum["raw_confidence"] = result["raw_confidence"]
         datum["ellipse"] = result["ellipse"]
 
+        # Raw (pre-smoothing) ellipse for noise diagnostics
+        datum["raw_ellipse"] = {
+            "center": (raw_cx, raw_cy),
+            "axes": (raw_minor, raw_major),
+            "angle": raw_angle,
+        }
+        datum["pixel_jitter"] = pixel_jitter
+
         # Attach sub-stage timings to datum for downstream cross-process tracing
         datum["waterfall_timing"] = {
             "frame_id": getattr(frame, "index", 0),
@@ -809,6 +839,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         }
 
         return datum
+
 
     def _extract_gray_image(self, frame) -> Optional[np.ndarray]:
         if hasattr(frame, "gray") and frame.gray is not None:

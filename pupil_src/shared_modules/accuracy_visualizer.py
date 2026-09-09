@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import csv
 from datetime import datetime
 import logging
+import math
 import os
 import traceback
 import typing as T
@@ -217,14 +218,17 @@ class Accuracy_Visualizer(Plugin):
         root_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
         )
-        val_dir = os.environ.get(
+        self.val_dir = os.environ.get(
             "PUPIL_VALIDATION_DIR", os.path.join(root_dir, "val_results")
         )
-        os.makedirs(val_dir, exist_ok=True)
+        os.makedirs(self.val_dir, exist_ok=True)
 
         date_str = datetime.now().strftime("%y_%m_%d")
         filename = f"validation_results_{date_str}.csv"
-        self.csv_path = os.path.join(val_dir, filename)
+        self.csv_path = os.path.join(self.val_dir, filename)
+
+        # Raw data export toggle (enabled by default; CSV files are small ~150 KB each)
+        self.export_raw_data = True
 
     def init_ui(self):
         from pyglui import ui
@@ -327,6 +331,18 @@ class Accuracy_Visualizer(Plugin):
             ui.Button("Export Validation Results to CSV", self._export_validation_to_csv)
         )
 
+        self.menu.append(ui.Info_Text(
+            "Raw Data Export: saves pupil_positions.csv, gaze_positions.csv, "
+            "evaluation.csv and export_info.csv to val_results/raw_data/ on every "
+            "calibration and validation run."
+        ))
+        self.menu.append(
+            ui.Switch("export_raw_data", self, label="Export Raw Data on Calib/Test")
+        )
+        self.menu.append(
+            ui.Button("Export Raw Data Now", self._export_raw_data_now)
+        )
+
     def deinit_ui(self):
         self.remove_menu()
 
@@ -381,6 +397,8 @@ class Accuracy_Visualizer(Plugin):
         )
 
         self.recalculate()
+        if self.export_raw_data:
+            self._export_raw_session_data("calibration")
         return True
 
     def __handle_validation_data_notification(self, note_dict: dict) -> bool:
@@ -403,6 +421,8 @@ class Accuracy_Visualizer(Plugin):
 
         self.recalculate()
         self._export_validation_to_csv()
+        if self.export_raw_data:
+            self._export_raw_session_data("validation")
         return True
 
     def recalculate(self):
@@ -545,6 +565,315 @@ class Accuracy_Visualizer(Plugin):
             )
         except Exception as e:
             logger.error(f"Failed to export validation result to CSV: {e}")
+
+    def _export_raw_data_now(self):
+        """Called from the UI 'Export Raw Data Now' button."""
+        if not self.recent_input.is_complete:
+            logger.warning("No completed calibration/validation data available to export.")
+            return
+        session_type = "calibration" if getattr(self.recent_input, "is_calibration", True) else "validation"
+        self._export_raw_session_data(session_type)
+
+    def _export_raw_session_data(self, session_type: str):
+        """
+        Export raw pupil & gaze data for one calibration or validation session.
+
+        Creates val_results/raw_data/<session_type>_<model>_<YYYY-MM-DD_HH-MM-SS>/
+        containing:
+            pupil_positions.csv  - Pupil_Positions_Exporter schema + raw diagnostic cols
+            gaze_positions.csv   - Gaze_Positions_Exporter schema
+            evaluation.csv       - per-sample target vs gaze angular error
+            export_info.csv      - metadata
+        """
+        import csv as _csv
+        import traceback as _tb
+        from datetime import datetime as _dt
+        if not self.recent_input.is_complete:
+            logger.warning("_export_raw_session_data: no complete data available.")
+            return
+
+        try:
+            model_name = getattr(self.g_pool, "pupil_detector_model", "unknown")
+            gazer_name = getattr(self.recent_input, "gazer_class_name", "unknown")
+            timestamp_str = _dt.now().strftime("%Y-%m-%d_%H-%M-%S")
+            folder_name = f"{session_type}_{model_name}_{timestamp_str}"
+            out_dir = os.path.join(self.val_dir, "raw_data", folder_name)
+            os.makedirs(out_dir, exist_ok=True)
+
+            pupil_list = self.recent_input.pupil_list or []
+            ref_list = self.recent_input.ref_list or []
+            gazer_class = self.recent_input.gazer_class
+            gazer_params = self.recent_input.gazer_params
+
+            # Build gaze_pos from gazer or from cached gaze_list
+            gaze_list_cached = getattr(self.recent_input, "gaze_list", None)
+            if gaze_list_cached:
+                gaze_pos = gaze_list_cached
+            elif gazer_class is not None and gazer_params is not None:
+                try:
+                    gazer = gazer_class(self.g_pool, params=gazer_params, register_as_active=False)
+                    gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
+                except Exception as exc:
+                    logger.warning(f"Could not map gaze for raw export: {exc}")
+                    gaze_pos = []
+            else:
+                gaze_pos = []
+
+            # ── 1. pupil_positions.csv ─────────────────────────────────
+            pupil_fields = [
+                "pupil_timestamp", "world_index", "eye_id", "confidence",
+                "norm_pos_x", "norm_pos_y", "diameter", "method",
+                "ellipse_center_x", "ellipse_center_y", "ellipse_axis_a",
+                "ellipse_axis_b", "ellipse_angle",
+                "diameter_3d", "model_confidence", "model_id",
+                "sphere_center_x", "sphere_center_y", "sphere_center_z", "sphere_radius",
+                "circle_3d_center_x", "circle_3d_center_y", "circle_3d_center_z",
+                "circle_3d_normal_x", "circle_3d_normal_y", "circle_3d_normal_z",
+                "circle_3d_radius", "theta", "phi",
+                "projected_sphere_center_x", "projected_sphere_center_y",
+                "projected_sphere_axis_a", "projected_sphere_axis_b",
+                "projected_sphere_angle",
+                "raw_center_x", "raw_center_y", "raw_axis_a", "raw_axis_b",
+                "raw_angle", "raw_confidence", "pixel_jitter",
+            ]
+            pupil_path = os.path.join(out_dir, "pupil_positions.csv")
+            with open(pupil_path, "w", newline="", encoding="utf-8") as f:
+                writer = _csv.DictWriter(f, fieldnames=pupil_fields, extrasaction="ignore")
+                writer.writeheader()
+                for p in pupil_list:
+                    ellipse = p.get("ellipse") or {}
+                    e_center = ellipse.get("center", (None, None))
+                    e_axes = ellipse.get("axes", (None, None))
+                    raw_el = p.get("raw_ellipse") or {}
+                    raw_center = raw_el.get("center", (None, None))
+                    raw_axes = raw_el.get("axes", (None, None))
+                    norm = p.get("norm_pos", (None, None))
+                    sphere = p.get("sphere") or {}
+                    c3d = p.get("circle_3d") or {}
+                    psphere = p.get("projected_sphere") or {}
+                    row = {
+                        "pupil_timestamp": str(p.get("timestamp")),
+                        "world_index": "",
+                        "eye_id": p.get("id"),
+                        "confidence": p.get("confidence"),
+                        "norm_pos_x": norm[0] if norm else None,
+                        "norm_pos_y": norm[1] if norm else None,
+                        "diameter": p.get("diameter"),
+                        "method": p.get("method"),
+                        "ellipse_center_x": e_center[0],
+                        "ellipse_center_y": e_center[1],
+                        "ellipse_axis_a": e_axes[0],
+                        "ellipse_axis_b": e_axes[1],
+                        "ellipse_angle": ellipse.get("angle"),
+                        "diameter_3d": p.get("diameter_3d"),
+                        "model_confidence": p.get("model_confidence"),
+                        "model_id": p.get("model_id"),
+                        "sphere_center_x": sphere.get("center", [None, None, None])[0],
+                        "sphere_center_y": sphere.get("center", [None, None, None])[1],
+                        "sphere_center_z": sphere.get("center", [None, None, None])[2],
+                        "sphere_radius": sphere.get("radius"),
+                        "circle_3d_center_x": c3d.get("center", [None, None, None])[0],
+                        "circle_3d_center_y": c3d.get("center", [None, None, None])[1],
+                        "circle_3d_center_z": c3d.get("center", [None, None, None])[2],
+                        "circle_3d_normal_x": c3d.get("normal", [None, None, None])[0],
+                        "circle_3d_normal_y": c3d.get("normal", [None, None, None])[1],
+                        "circle_3d_normal_z": c3d.get("normal", [None, None, None])[2],
+                        "circle_3d_radius": c3d.get("radius"),
+                        "theta": p.get("theta"),
+                        "phi": p.get("phi"),
+                        "projected_sphere_center_x": psphere.get("center", [None, None])[0],
+                        "projected_sphere_center_y": psphere.get("center", [None, None])[1],
+                        "projected_sphere_axis_a": psphere.get("axes", [None, None])[0],
+                        "projected_sphere_axis_b": psphere.get("axes", [None, None])[1],
+                        "projected_sphere_angle": psphere.get("angle"),
+                        "raw_center_x": raw_center[0],
+                        "raw_center_y": raw_center[1],
+                        "raw_axis_a": raw_axes[0],
+                        "raw_axis_b": raw_axes[1],
+                        "raw_angle": raw_el.get("angle"),
+                        "raw_confidence": p.get("raw_confidence"),
+                        "pixel_jitter": p.get("pixel_jitter"),
+                    }
+                    writer.writerow(row)
+            logger.info(f"Raw export: wrote {len(pupil_list)} pupil rows -> {pupil_path}")
+
+            # ── 2. gaze_positions.csv ──────────────────────────────────
+            gaze_fields = [
+                "gaze_timestamp", "world_index", "confidence",
+                "norm_pos_x", "norm_pos_y", "base_data",
+                "gaze_point_3d_x", "gaze_point_3d_y", "gaze_point_3d_z",
+                "eye_center0_3d_x", "eye_center0_3d_y", "eye_center0_3d_z",
+                "gaze_normal0_x", "gaze_normal0_y", "gaze_normal0_z",
+                "eye_center1_3d_x", "eye_center1_3d_y", "eye_center1_3d_z",
+                "gaze_normal1_x", "gaze_normal1_y", "gaze_normal1_z",
+            ]
+            gaze_path = os.path.join(out_dir, "gaze_positions.csv")
+            with open(gaze_path, "w", newline="", encoding="utf-8") as f:
+                writer = _csv.DictWriter(f, fieldnames=gaze_fields, extrasaction="ignore")
+                writer.writeheader()
+                for g in gaze_pos:
+                    norm = g.get("norm_pos", (None, None))
+                    gp3d = g.get("gaze_point_3d") or [None, None, None]
+                    base_data = g.get("base_data")
+                    if base_data:
+                        base_data = " ".join(
+                            f"{b['timestamp']}-{b['id']}" for b in base_data
+                        )
+                    ec3d = g.get("eye_centers_3d") or {}
+                    gn3d = g.get("gaze_normals_3d") or {}
+                    ec0 = ec3d.get("0", ec3d.get(0, [None, None, None]))
+                    ec1 = ec3d.get("1", ec3d.get(1, [None, None, None]))
+                    gn0 = gn3d.get("0", gn3d.get(0, [None, None, None]))
+                    gn1 = gn3d.get("1", gn3d.get(1, [None, None, None]))
+                    if not ec3d and g.get("eye_center_3d"):
+                        try:
+                            eye_id = str(g["base_data"][0]["id"])
+                        except (KeyError, IndexError, TypeError):
+                            eye_id = "0"
+                        if eye_id == "0":
+                            ec0 = g["eye_center_3d"]
+                            gn0 = g.get("gaze_normal_3d", [None, None, None])
+                        else:
+                            ec1 = g["eye_center_3d"]
+                            gn1 = g.get("gaze_normal_3d", [None, None, None])
+                    row = {
+                        "gaze_timestamp": str(g.get("timestamp")),
+                        "world_index": "",
+                        "confidence": g.get("confidence"),
+                        "norm_pos_x": norm[0] if norm else None,
+                        "norm_pos_y": norm[1] if norm else None,
+                        "base_data": base_data,
+                        "gaze_point_3d_x": gp3d[0],
+                        "gaze_point_3d_y": gp3d[1],
+                        "gaze_point_3d_z": gp3d[2],
+                        "eye_center0_3d_x": ec0[0], "eye_center0_3d_y": ec0[1],
+                        "eye_center0_3d_z": ec0[2],
+                        "gaze_normal0_x": gn0[0], "gaze_normal0_y": gn0[1],
+                        "gaze_normal0_z": gn0[2],
+                        "eye_center1_3d_x": ec1[0], "eye_center1_3d_y": ec1[1],
+                        "eye_center1_3d_z": ec1[2],
+                        "gaze_normal1_x": gn1[0], "gaze_normal1_y": gn1[1],
+                        "gaze_normal1_z": gn1[2],
+                    }
+                    writer.writerow(row)
+            logger.info(f"Raw export: wrote {len(gaze_pos)} gaze rows -> {gaze_path}")
+
+            # ── 3. evaluation.csv ──────────────────────────────────────
+            eval_path = os.path.join(out_dir, "evaluation.csv")
+            if ref_list and gaze_pos:
+                correlated = closest_matches_monocular(gaze_pos, ref_list)
+                try:
+                    intrinsics = self.g_pool.capture.intrinsics
+                    cr = Accuracy_Visualizer._coordinate_transform_ref_in_norm_space(
+                        correlated, intrinsics
+                    )
+                    cam_space = cr.camera_space.reshape(-1, 6)
+                    dot_products = np.einsum(
+                        "ij,ij->i", cam_space[:, :3], cam_space[:, 3:]
+                    ).clip(-1.0, 1.0)
+                    angular_errors = np.rad2deg(np.arccos(dot_products))
+                except Exception as exc:
+                    logger.warning(
+                        f"Could not compute angular errors for evaluation.csv: {exc}"
+                    )
+                    correlated = []
+                    angular_errors = np.array([])
+
+                eval_fields = [
+                    "sample_idx", "session_type", "model", "gazer_class",
+                    "ref_norm_x", "ref_norm_y", "gaze_norm_x", "gaze_norm_y",
+                    "angular_error_deg", "is_outlier",
+                    "pupil_timestamp", "pupil_confidence",
+                    "ellipse_cx", "ellipse_cy",
+                    "raw_cx", "raw_cy", "pixel_jitter",
+                ]
+                with open(eval_path, "w", newline="", encoding="utf-8") as f:
+                    writer = _csv.DictWriter(
+                        f, fieldnames=eval_fields, extrasaction="ignore"
+                    )
+                    writer.writeheader()
+                    outlier_thresh = float(getattr(self, "_outlier_threshold", 2.5))
+                    for idx, match in enumerate(correlated):
+                        ref = match["ref"]
+                        gaze = match["pupil"]
+                        ang_err = (
+                            float(angular_errors[idx])
+                            if idx < len(angular_errors)
+                            else None
+                        )
+                        base_data = gaze.get("base_data") or []
+                        pupil_datum = base_data[0] if base_data else gaze
+                        pupil_ts = pupil_datum.get("timestamp")
+                        pupil_conf = pupil_datum.get("confidence")
+                        ell = pupil_datum.get("ellipse") or {}
+                        e_ctr = ell.get("center", (None, None))
+                        raw_ell = pupil_datum.get("raw_ellipse") or {}
+                        r_ctr = raw_ell.get("center", (None, None))
+                        pjitter = pupil_datum.get("pixel_jitter")
+                        ref_norm = ref.get("norm_pos", (None, None))
+                        gaze_norm = gaze.get("norm_pos", (None, None))
+                        row = {
+                            "sample_idx": idx,
+                            "session_type": session_type,
+                            "model": model_name,
+                            "gazer_class": gazer_name,
+                            "ref_norm_x": ref_norm[0],
+                            "ref_norm_y": ref_norm[1],
+                            "gaze_norm_x": gaze_norm[0],
+                            "gaze_norm_y": gaze_norm[1],
+                            "angular_error_deg": (
+                                round(ang_err, 5) if ang_err is not None else None
+                            ),
+                            "is_outlier": (
+                                ang_err is not None and ang_err > outlier_thresh
+                            ),
+                            "pupil_timestamp": pupil_ts,
+                            "pupil_confidence": pupil_conf,
+                            "ellipse_cx": e_ctr[0],
+                            "ellipse_cy": e_ctr[1],
+                            "raw_cx": r_ctr[0],
+                            "raw_cy": r_ctr[1],
+                            "pixel_jitter": pjitter,
+                        }
+                        writer.writerow(row)
+                logger.info(
+                    f"Raw export: wrote {len(correlated)} eval rows -> {eval_path}"
+                )
+            else:
+                logger.info("Raw export: skipping evaluation.csv (no ref or gaze data)")
+
+            # ── 4. export_info.csv ────────────────────────────────────
+            info_path = os.path.join(out_dir, "export_info.csv")
+            import math as _math
+            acc_val = (
+                round(float(self.accuracy.result), 5)
+                if self.accuracy and not _math.isnan(self.accuracy.result)
+                else None
+            )
+            prec_val = (
+                round(float(self.precision.result), 5)
+                if self.precision and not _math.isnan(self.precision.result)
+                else None
+            )
+            with open(info_path, "w", newline="", encoding="utf-8") as f:
+                writer = _csv.writer(f)
+                writer.writerow(["key", "value"])
+                writer.writerow(["session_type", session_type])
+                writer.writerow(["model", model_name])
+                writer.writerow(["gazer_class", gazer_name])
+                writer.writerow(["timestamp", timestamp_str])
+                writer.writerow(["accuracy_deg", acc_val])
+                writer.writerow(["precision_deg", prec_val])
+                writer.writerow(["outlier_threshold_deg", self._outlier_threshold])
+                writer.writerow(["pupil_count", len(pupil_list)])
+                writer.writerow(["ref_count", len(ref_list)])
+                writer.writerow(["gaze_count", len(gaze_pos)])
+
+            logger.info(f"Raw session data exported to: {out_dir}")
+
+        except Exception as exc:
+            logger.error(f"_export_raw_session_data failed: {exc}")
+            logger.debug(traceback.format_exc())
 
     @staticmethod
     def calc_acc_prec_errlines(
