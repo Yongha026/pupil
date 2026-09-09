@@ -1,0 +1,1 @@
+           ERROR    world - accuracy_visualizer: _export_raw_session_data failed: object of type 'generator' has no len()                                                                   accuracy_visualizer.py:875
