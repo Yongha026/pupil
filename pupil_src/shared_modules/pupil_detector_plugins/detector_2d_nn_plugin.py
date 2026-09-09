@@ -142,7 +142,7 @@ class EllipseOneEuroFilter:
     def __init__(
         self,
         min_cutoff: float = 1.0,
-        beta: float = 0.01,
+        beta: float = 0.05,
         d_cutoff: float = 1.0,
     ):
         self.f_cx = OneEuroFilter(min_cutoff=min_cutoff, beta=beta, d_cutoff=d_cutoff)

@@ -44,5 +44,5 @@ def gazer_classes_by_class_name(
     return {cls.__name__: cls for cls in gazers}
 
 
-default_gazer_class = Gazer3D
+default_gazer_class = Gazer2D
 assert default_gazer_class in registered_gazer_classes()
