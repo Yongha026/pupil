@@ -217,7 +217,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     def __init__(
         self,
         g_pool=None,
-        active_model: str = "adgbc_400",
+        active_model: str = "adgbc",
         confidence_threshold: float = 0.6,
         show_confidence_graph: bool = True,
         enable_smoothing: bool = True,

@@ -24,6 +24,8 @@ if [ -f "$GBC400" ]; then
 else
   gdown 1GpSd1JvA2K6JbqhLit1XtHwTkh-VayNH
   echo "Downloaded ckpt for AD-GBC_400"
+fi
+
 # 2. RITnet
 if [ -f "$RITNET" ]; then
   echo "Already have ckpt for nn_RITnet"

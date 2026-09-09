@@ -119,6 +119,7 @@ def world(
         ("ulvmunet", "UltraLight-VMUNet"),
         ("ukan", "U-KAN"),
         ("adgbc", "AD-GBC"),
+        ("adgbc_400", "AD-GBC_400"),
         ("2dcpp", "Classic C++ (2D)"),
     ]
 
