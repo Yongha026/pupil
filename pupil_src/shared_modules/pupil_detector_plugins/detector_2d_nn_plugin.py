@@ -69,7 +69,7 @@ class OneEuroFilter:
     def __init__(
         self,
         min_cutoff: float = 1.0,
-        beta: float = 0.01,
+        beta: float = 0.05,
         d_cutoff: float = 1.0,
     ):
         self.min_cutoff = float(min_cutoff)
@@ -525,7 +525,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 logger.info(f"Received pupil detector smoothing change: {new_val}")
                 self.set_smoothing(new_val, broadcast=False)
         elif subject == "pupil_detector.set_smoothing_method":
-            new_method = str(notification.get("method", "ema"))
+            new_method = str(notification.get("method", "one_euro"))
             if new_method != self._smoothing_method:
                 logger.info(f"Received pupil detector smoothing method change: {new_method}")
                 self.set_smoothing_method(new_method, broadcast=False)
@@ -682,8 +682,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
-
-        ellipse = cv2.fitEllipse(best_contour)
+        hull = cv2.convexHull(best_contour)
+        ellipse = cv2.fitEllipse(hull)
         (cx, cy), (d1, d2), angle_deg = ellipse
 
         # Guarantee axes[0] is minor_diameter and axes[1] is major_diameter (axes[0] <= axes[1])
