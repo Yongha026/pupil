@@ -137,10 +137,10 @@ def load_export_info(run_dir: Path) -> dict:
     return info
 
 
-# ─── Analysis routines ────────────────────────────────────────────────────────
+# --- Analysis routines --------------------------------------------------------
 
 def analyze_pupil_jitter(pupils: list[dict]):
-    print("\n━━━  Pupil Pixel Jitter  ━━━")
+    print("\n===  Pupil Pixel Jitter  ===")
     jitters = [p["pixel_jitter"] for p in pupils if p["pixel_jitter"] is not None]
     if not jitters:
         print("  No pixel_jitter data found (was detector_2d_nn_plugin.py patched?)")
@@ -157,17 +157,17 @@ def analyze_pupil_jitter(pupils: list[dict]):
 
     # Histogram buckets
     buckets = [0, 2, 5, 10, 20, 40, float("inf")]
-    labels = ["0–2 px", "2–5 px", "5–10 px", "10–20 px", "20–40 px", ">40 px"]
+    labels = ["0-2 px", "2-5 px", "5-10 px", "10-20 px", "20-40 px", ">40 px"]
     print("\n  Jitter distribution:")
     for lo, hi, label in zip(buckets, buckets[1:], labels):
         count = np.sum((arr >= lo) & (arr < hi))
-        pct = 100.0 * count / len(arr)
-        bar = "█" * int(pct / 2)
+        pct = 100.0 * count / len(arr) if len(arr) > 0 else 0.0
+        bar = "#" * int(pct / 2)
         print(f"    {label:12s}: {count:5,}  ({pct:5.1f}%)  {bar}")
 
 
 def analyze_gaze_accuracy(evals: list[dict]):
-    print("\n━━━  Gaze Angular Error  ━━━")
+    print("\n===  Gaze Angular Error  ===")
     errors = [e["angular_error_deg"] for e in evals if e["angular_error_deg"] is not None]
     if not errors:
         print("  No evaluation.csv data found (validation-only).")
@@ -175,25 +175,25 @@ def analyze_gaze_accuracy(evals: list[dict]):
 
     arr = np.array(errors)
     print(f"  Matched samples          : {len(arr):,}")
-    print(f"  Mean angular error       : {arr.mean():.3f}°")
-    print(f"  Median (p50)             : {np.median(arr):.3f}°")
-    print(f"  p75                      : {np.percentile(arr, 75):.3f}°")
-    print(f"  p95                      : {np.percentile(arr, 95):.3f}°")
-    print(f"  p99                      : {np.percentile(arr, 99):.3f}°")
-    print(f"  Max                      : {arr.max():.3f}°")
+    print(f"  Mean angular error       : {arr.mean():.3f} deg")
+    print(f"  Median (p50)             : {np.median(arr):.3f} deg")
+    print(f"  p75                      : {np.percentile(arr, 75):.3f} deg")
+    print(f"  p95                      : {np.percentile(arr, 95):.3f} deg")
+    print(f"  p99                      : {np.percentile(arr, 99):.3f} deg")
+    print(f"  Max                      : {arr.max():.3f} deg")
 
     buckets = [0, 1, 2, 5, 10, float("inf")]
-    labels = ["< 1°", "1–2°", "2–5°", "5–10°", "≥ 10°"]
+    labels = ["< 1 deg", "1-2 deg", "2-5 deg", "5-10 deg", ">= 10 deg"]
     print("\n  Error distribution:")
     for lo, hi, label in zip(buckets, buckets[1:], labels):
         count = np.sum((arr >= lo) & (arr < hi))
-        pct = 100.0 * count / len(arr)
-        bar = "█" * int(pct / 2)
-        print(f"    {label:8s}: {count:5,}  ({pct:5.1f}%)  {bar}")
+        pct = 100.0 * count / len(arr) if len(arr) > 0 else 0.0
+        bar = "#" * int(pct / 2)
+        print(f"    {label:12s}: {count:5,}  ({pct:5.1f}%)  {bar}")
 
 
 def analyze_outliers(evals: list[dict], pupils: list[dict]):
-    print("\n━━━  Outlier Analysis  ━━━")
+    print("\n===  Outlier Analysis  ===")
     errors = [(e["angular_error_deg"], e["pixel_jitter"], e["pupil_confidence"])
               for e in evals
               if e["angular_error_deg"] is not None]
@@ -205,23 +205,23 @@ def analyze_outliers(evals: list[dict], pupils: list[dict]):
     jit_arr = np.array([x[1] if x[1] is not None else float("nan") for x in errors])
     conf_arr = np.array([x[2] if x[2] is not None else float("nan") for x in errors])
 
-    outlier_mask = ang_arr > 5.0  # > 5° as "bad" samples
+    outlier_mask = ang_arr > 5.0  # > 5 deg as "bad" samples
     normal_mask = ~outlier_mask
 
     n_total = len(ang_arr)
     n_out = int(outlier_mask.sum())
-    print(f"  Outliers (>5°)           : {n_out:,} / {n_total:,}  ({100*n_out/n_total:.1f}%)")
-    print(f"  Outliers (>10°)          : {int((ang_arr>10).sum()):,} / {n_total:,}  ({100*(ang_arr>10).mean():.1f}%)")
+    print(f"  Outliers (>5 deg)        : {n_out:,} / {n_total:,}  ({100*n_out/n_total:.1f}%)")
+    print(f"  Outliers (>10 deg)       : {int((ang_arr>10).sum()):,} / {n_total:,}  ({100*(ang_arr>10).mean():.1f}%)")
 
     if n_out > 0 and not np.all(np.isnan(jit_arr[outlier_mask])):
-        print(f"\n  Pixel jitter – outlier samples:")
+        print(f"\n  Pixel jitter - outlier samples:")
         out_j = jit_arr[outlier_mask]
         out_j = out_j[~np.isnan(out_j)]
         if len(out_j):
             print(f"    median = {np.median(out_j):.2f} px,  p95 = {np.percentile(out_j, 95):.2f} px")
 
     if normal_mask.sum() > 0 and not np.all(np.isnan(jit_arr[normal_mask])):
-        print(f"  Pixel jitter – normal samples:")
+        print(f"  Pixel jitter - normal samples:")
         ok_j = jit_arr[normal_mask]
         ok_j = ok_j[~np.isnan(ok_j)]
         if len(ok_j):
@@ -231,13 +231,13 @@ def analyze_outliers(evals: list[dict], pupils: list[dict]):
         out_c = conf_arr[outlier_mask]
         out_c = out_c[~np.isnan(out_c)]
         if len(out_c):
-            print(f"\n  Confidence – outlier samples : mean = {out_c.mean():.3f},  min = {out_c.min():.3f}")
+            print(f"\n  Confidence - outlier samples : mean = {out_c.mean():.3f},  min = {out_c.min():.3f}")
 
     if normal_mask.sum() > 0 and not np.all(np.isnan(conf_arr[normal_mask])):
         ok_c = conf_arr[normal_mask]
         ok_c = ok_c[~np.isnan(ok_c)]
         if len(ok_c):
-            print(f"  Confidence – normal samples  : mean = {ok_c.mean():.3f}")
+            print(f"  Confidence - normal samples  : mean = {ok_c.mean():.3f}")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -271,7 +271,7 @@ def main():
 
     info = load_export_info(run_dir)
     if info:
-        print("\n━━━  Export Info  ━━━")
+        print("\n===  Export Info  ===")
         for k, v in info.items():
             print(f"  {k:<24s}: {v}")
 
@@ -289,8 +289,8 @@ def main():
         analyze_gaze_accuracy(evals)
         analyze_outliers(evals, pupils)
     else:
-        print("\n━━━  Gaze Accuracy  ━━━")
-        print("  evaluation.csv not found – only available after a Validation (Testing) run.")
+        print("\n===  Gaze Accuracy  ===")
+        print("  evaluation.csv not found - only available after a Validation (Testing) run.")
 
     print(f"\n{'='*60}")
     print("  Analysis complete.")

@@ -794,8 +794,8 @@ class Accuracy_Visualizer(Plugin):
                     writer.writeheader()
                     outlier_thresh = float(getattr(self, "_outlier_threshold", 2.5))
                     for idx, match in enumerate(correlated):
-                        ref = match["ref"]
-                        gaze = match["pupil"]
+                        gaze = match["ref"]
+                        ref = match["pupil"]
                         ang_err = (
                             float(angular_errors[idx])
                             if idx < len(angular_errors)
