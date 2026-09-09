@@ -8,6 +8,7 @@ RUL="rollingunet_nn_best.pth"
 ULVM="ulvm_nn_best.pth"
 UKAN="ukan_nn_best.pth"
 PMR="pmr_nn_best.pth"
+GBC400="adgbc_400_best.pth"
 
 # 1. AD-GBC
 if [ -f "$ADGBC" ]; then
@@ -17,6 +18,12 @@ else
   echo "Downloaded ckpt for AD-GBC"
 fi
 
+# 1.1 AD-GBC_400
+if [ -f "$GBC400" ]; then
+  echo "Already have ckp t for AD-GBC_400"
+else
+  gdown 1GpSd1JvA2K6JbqhLit1XtHwTkh-VayNH
+  echo "Downloaded ckpt for AD-GBC_400"
 # 2. RITnet
 if [ -f "$RITNET" ]; then
   echo "Already have ckpt for nn_RITnet"

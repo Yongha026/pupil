@@ -37,6 +37,8 @@ model_path_rollingunet = os.path.join(plugin_dir, "rollingunet_nn_best.pth")
 model_path_ulvmunet = os.path.join(plugin_dir, "ulvm_nn_best.pth")
 model_path_ukan = os.path.join(plugin_dir, "ukan_nn_best.pth")
 model_path_pmrnet = os.path.join(plugins_dir, "pmr_nn_best.pth")
+model_path_adgbc_400 = os.path.join(plugins_dir, "adgbc_400_best.pth")
+
 # Load only the specified DETECT_MODEL to save memory and startup time
 if args.DETECT_MODEL == "adgbc":
     # 1) AD-GBC Model
@@ -50,6 +52,23 @@ if args.DETECT_MODEL == "adgbc":
             model.eval()
         else:
             print(f"ADGBC ckpt file not found at {model_path_adgbc}")
+    except Exception as e:
+        print(f"Error loading adgbc: {e}")
+        raise e
+
+elif args.DETECT_MODEL == "adgbc_400":
+    import adgbc
+
+    try:
+        model = adgbc.GBC_Rolling_Unet_S(num_classes=4, input_channels=1, deep_supervision=False).to(device)
+        if os.path.exists(model_path_adgbc_400):
+            checkpoint = torch.load(model_path_adgbc_400, map_location=device, weights_only=False)
+            state_dict = checkpoint["network_weights"] if (
+                        isinstance(checkpoint, dict) and "network_weights" in checkpoint) else checkpoint
+            model.load_state_dict(state_dict)
+            model.eval()
+        else:
+            print(f"ADGBC_400 ckpt file not found at {model_path_adgbc_400}")
     except Exception as e:
         print(f"Error loading adgbc: {e}")
         raise e
@@ -172,13 +191,15 @@ elif args.DETECT_MODEL == "pmrnet":
         print(f"Failed to load PMRNet: {e}")
         raise e
 
+input_size = (1,400,400) if args.DETECT_MODEL == "adgbc_400" else (1,192,192)
 macs, params = get_model_complexity_info(
-    model, (1, 192,192), as_strings=True, print_per_layer_stat=True
+    model, input_size, as_strings=True, print_per_layer_stat=True
 )
 print(f"{macs},{params}")
 
 ############# Result in iulab9 A6000 #############
 # adgbc         21.25  GMac  ~42.5 GFLOPs, 28.93 M
+# adgbc_400     5.91   GMac  ~11.82GFLOPs,  1.82 M
 # nn_ritnet     2.39   GMac, ~4.78 GFLOPs, 248.9 k
 # nn_unext      315.93 MMac, ~630  MFLOPs, 1.47  M
 # mambaliteunet 376.52 MMac, ~752  MFLOPs, 910.39k

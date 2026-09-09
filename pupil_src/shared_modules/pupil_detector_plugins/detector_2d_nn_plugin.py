@@ -50,6 +50,7 @@ AVAILABLE_MODELS: List[Tuple[str, str]] = [
     ("ulvmunet", "UltraLight-VMUNet"),
     ("ukan", "U-KAN"),
     ("adgbc", "AD-GBC"),
+    ("adgbc_400","AD-GBC_400"),
     ("2dcpp", "Classic C++ (2D)"),
 ]
 
@@ -216,7 +217,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     def __init__(
         self,
         g_pool=None,
-        active_model: str = "adgbc",
+        active_model: str = "adgbc_400",
         confidence_threshold: float = 0.6,
         show_confidence_graph: bool = True,
         enable_smoothing: bool = True,
@@ -406,6 +407,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                     num_classes=4, input_channels=1, deep_supervision=False
                 ).to(self.device)
                 self._load_state_dict(model, ckpt_path, "AD-GBC")
+
+            elif model_name == "adgbc_400":
+                ckpt_path = os.path.join(self.ckpt_dir, "adgbc_400_best.pth")
+                model = adgbc.GBC_Rolling_Unet_S(
+                    num_classes=4, input_channels=1, deep_supervision=False
+                ).to(self.device)
+                self._load_state_dict(model, ckpt_path, "AD-GBC_400")
 
             else:
                 logger.warning(f"Unknown neural network model requested: {model_name}")
