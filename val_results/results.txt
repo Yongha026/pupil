@@ -1,6 +1,54 @@
-09.10 @raw_data: accuracy vs jitter for adgbc/2dcpp w/ w/o one euro filter
-1. 2dcpp no filter
-validation_2dcpp_2026-09-10_16-27-47: Accuracy=1.3483 deg, Precision=0.0654 deg
+=============================================================================================
+        09.10 @raw_data: accuracy vs jitter for adgbc/2dcpp w/ w/o one euro filter
+=============================================================================================
+
+
+=============================== 1. 2dcpp no filter ===============================
+Validation: val_results_26_09_10-16-26.csv
+Raw data:   validation_2dcpp_2026-09-10_16-27-47
+Metrics:    accuracy=1.3236 ± 0.1117, precision=0.0658 ± 0.0022
+===  Gaze Angular Error  ===
+  Matched samples          : 1,082
+  Mean angular error       : 2.179 deg
+  Median (p50)             : 1.454 deg
+  p75                      : 1.774 deg
+  p95                      : 2.126 deg
+  p99                      : 77.888 deg
+  Max                      : 78.451 deg
+
+  Error distribution:
+    < 1 deg     :   410  ( 37.9%)  ##################
+    1-2 deg     :   556  ( 51.4%)  #########################
+    2-5 deg     :    94  (  8.7%)  ####
+    5-10 deg    :     6  (  0.6%)
+        >= 10 deg   :    16  (  1.5%)
+
+===  Outlier Analysis  ===
+  Outliers (>5 deg)        : 22 / 1,082  (2.0%)
+  Outliers (>10 deg)       : 16 / 1,082  (1.5%)
+
 2. 2dcpp one euro filter
-validation_2dcpp_2026-09-10_16-30-51: Accuracy=1.3502 deg, Precision=0.0817 deg
-3. adgbc no filter
+Validation: val_results_26_09_10-16-29.csv
+Raw data:   validation_2dcpp_2026-09-10_16-30-51
+Metrics:    accuracy=1.2347 ± 0.2792, precision=0.0917 ± 0.0072
+===  Gaze Angular Error  ===
+  Matched samples          : 1,081
+  Mean angular error       : 10.039 deg
+  Median (p50)             : 1.313 deg
+  p75                      : 1.871 deg
+  p95                      : 76.957 deg
+  p99                      : 89.503 deg
+  Max                      : 89.657 deg
+
+  Error distribution:
+    < 1 deg     :   260  ( 24.1%)  ############
+    1-2 deg     :   669  ( 61.9%)  ##############################
+    2-5 deg     :    15  (  1.4%)
+    5-10 deg    :     0  (  0.0%)
+    >= 10 deg   :   137  ( 12.7%)  ######
+
+===  Outlier Analysis  ===
+  Outliers (>5 deg)        : 137 / 1,081  (12.7%)
+  Outliers (>10 deg)       : 137 / 1,081  (12.7%)
+
+=============================== 3. adgbc no filter ===============================

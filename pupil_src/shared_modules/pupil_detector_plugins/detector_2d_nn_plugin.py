@@ -248,10 +248,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.enable_smoothing = bool(enable_smoothing)
 
         # Resolve smoothing method (One-Euro filter is default / initial)
-        # if "enable_smoothing" in kwargs and not kwargs["enable_smoothing"]:
-        #     smoothing_method = "none"
-        # elif not enable_smoothing:
-        if not self.enable_smoothing:
+        if "enable_smoothing" in kwargs and not kwargs["enable_smoothing"]:
+            smoothing_method = "none"
+        elif not enable_smoothing:
+        # if not self.enable_smoothing:
             smoothing_method = "none"
         if hasattr(self.g_pool, "pupil_detector_smoothing_method") and self.g_pool.pupil_detector_smoothing_method:
             smoothing_method = str(self.g_pool.pupil_detector_smoothing_method)
