@@ -1,0 +1,19 @@
+====================================================================================================================
+                                 STEADY-STATE LOOP LATENCY MODEL COMPARISON SUMMARY
+====================================================================================================================
+Stage Name                Category             2dcpp_none (ms)2dcpp_one_euro (ms) adgbc_none (ms)adgbc_one_euro (ms)
+--------------------------------------------------------------------------------------------------------------------
+Camera Ingest             Capture Latency                15.16           14.34           30.71           28.11
+ROI Extraction            Capture Latency                 0.00            0.00               -               -
+Pupil Preprocessing       Processing Latency                 -               -            0.47            0.49
+2D Detection (C++)        Processing Latency              0.00            0.00               -               -
+Neural Net Inference      Processing Latency                 -               -           11.26           11.90
+Contour & Ellipse Fit     Processing Latency                 -               -            0.69            0.77
+3D Eye Model              Processing Latency              1.30            1.39            0.66            0.71
+ZeroMQ IPC Transport      Transport Latency              16.71           16.45           16.49           16.76
+World Gaze Mapping        Transport Latency               0.00            0.00            0.00            0.00
+Render Submission         Display Latency                 6.44            6.59            3.31            2.94
+Display Buffer Swap       Display Latency                 0.09            0.10            0.06            0.04
+====================================================================================================================
+TOTAL SYSTEM LATENCY                                    39.69           38.87           63.65           61.73
+====================================================================================================================
