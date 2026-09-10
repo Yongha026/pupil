@@ -1,0 +1,7 @@
+date,time,model,gazer_class,accuracy_deg,accuracy_used_samples,accuracy_total_samples,precision_deg,precision_used_samples,precision_total_samples,outlier_threshold_deg,pupil_positions_count,ref_points_count,status
+2026-09-10,14:27:30,adgbc,Gazer2D,0.3831,601,601,0.0156,597,600,2.5,2228,120,success
+2026-09-10,14:27:39,adgbc,Gazer2D,0.35,595,595,0.0288,591,594,2.5,2210,120,success
+2026-09-10,14:27:48,adgbc,Gazer2D,0.4154,625,625,0.0149,621,624,2.5,2434,120,success
+2026-09-10,14:27:58,adgbc,Gazer2D,0.5304,607,607,0.0195,603,606,2.5,2276,120,success
+2026-09-10,14:28:06,adgbc,Gazer2D,0.485,586,586,0.0151,582,585,2.5,2222,120,success
+# "adgbc, one euro filter"

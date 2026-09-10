@@ -245,11 +245,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.active_model = active_model
         self.confidence_threshold = float(confidence_threshold)
         self.show_confidence_graph = bool(show_confidence_graph)
+        self.enable_smoothing = bool(enable_smoothing)
 
         # Resolve smoothing method (One-Euro filter is default / initial)
-        if "enable_smoothing" in kwargs and not kwargs["enable_smoothing"]:
-            smoothing_method = "none"
-        elif not enable_smoothing:
+        # if "enable_smoothing" in kwargs and not kwargs["enable_smoothing"]:
+        #     smoothing_method = "none"
+        # elif not enable_smoothing:
+        if not self.enable_smoothing:
             smoothing_method = "none"
         if hasattr(self.g_pool, "pupil_detector_smoothing_method") and self.g_pool.pupil_detector_smoothing_method:
             smoothing_method = str(self.g_pool.pupil_detector_smoothing_method)
@@ -678,7 +680,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         pupil_mask = np.zeros_like(pred, dtype=np.uint8)
         pupil_mask[pupil_pixels] = 255
 
-        if self._enable_smoothing:
+        if self.enable_smoothing:
             # 1. Anti-aliasing Gaussian blur & thresholding to smooth discrete pixel staircase
             pupil_mask = cv2.GaussianBlur(pupil_mask, (5, 5), 0)
             _, pupil_mask = cv2.threshold(pupil_mask, 127, 255, cv2.THRESH_BINARY)

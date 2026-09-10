@@ -1,0 +1,7 @@
+date,time,model,gazer_class,accuracy_deg,accuracy_used_samples,accuracy_total_samples,precision_deg,precision_used_samples,precision_total_samples,outlier_threshold_deg,pupil_positions_count,ref_points_count,status
+2026-09-10,14:29:34,2dcpp,Gazer2D,0.5204,1069,1082,0.0652,1057,1081,2.5,4092,120,success
+2026-09-10,14:29:43,2dcpp,Gazer2D,0.5446,1062,1085,0.0604,1050,1084,2.5,4072,120,success
+2026-09-10,14:29:53,2dcpp,Gazer2D,0.7105,1051,1075,0.0711,1033,1074,2.5,4214,120,success
+2026-09-10,14:30:02,2dcpp,Gazer2D,0.6392,1079,1097,0.0693,1069,1096,2.5,4114,120,success
+2026-09-10,14:30:11,2dcpp,Gazer2D,0.6688,1064,1086,0.0689,1058,1085,2.5,4096,120,success
+# "2dcpp, no smoothing"
