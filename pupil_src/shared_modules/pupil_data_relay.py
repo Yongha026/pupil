@@ -84,10 +84,13 @@ class Pupil_Data_Relay(System_Plugin_Base):
                     except ImportError:
                         from shared_modules.waterfall_logger import get_waterfall_logger
                     wf = get_waterfall_logger()
+                    smoothing_method = str(getattr(self.g_pool, "pupil_detector_smoothing_method", "one_euro"))
+                    model = str(timing.get("model", getattr(self.g_pool, "pupil_detector_model", "pmrnet")))
+                    model_smooth = model+"_"+smoothing_method
                     wf.log_frame_trace({
                         "frame_id": timing.get("frame_id", 0),
                         "process": timing.get("process", "eye0"),
-                        "model": timing.get("model", getattr(self.g_pool, "pupil_detector_model", "pmrnet")),
+                        "model": model_smooth,
                         "ingest_ms": ingest_ms,
                         "roi_ms": roi_ms,
                         "preprocess_ms": preprocess_ms,

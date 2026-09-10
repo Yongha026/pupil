@@ -699,12 +699,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         best_contour = max(contours, key=cv2.contourArea)
-        if len(best_contour) < 5:
+        hull = cv2.convexHull(best_contour)
+        if len(hull) < 5:
             self._prev_ellipse = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
-        hull = cv2.convexHull(best_contour)
+
         ellipse = cv2.fitEllipse(hull)
         (cx, cy), (d1, d2), angle_deg = ellipse
 
