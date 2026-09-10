@@ -217,14 +217,14 @@ class Accuracy_Visualizer(Plugin):
         root_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
         )
-        val_dir = os.environ.get(
+        self.val_dir = os.environ.get(
             "PUPIL_VALIDATION_DIR", os.path.join(root_dir, "val_results")
         )
-        os.makedirs(val_dir, exist_ok=True)
+        os.makedirs(self.val_dir, exist_ok=True)
 
         date_str = datetime.now().strftime("%y_%m_%d-%H-%M")
         filename = f"val_results_{date_str}.csv"
-        self.csv_path = os.path.join(val_dir, filename)
+        self.csv_path = os.path.join(self.val_dir, filename)
 
         self.export_raw_data =True
 
