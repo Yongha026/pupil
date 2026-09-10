@@ -52,3 +52,11 @@ Metrics:    accuracy=1.2347 ± 0.2792, precision=0.0917 ± 0.0072
   Outliers (>10 deg)       : 137 / 1,081  (12.7%)
 
 =============================== 3. adgbc no filter ===============================
+Validation: val_results_26_09_10-17-08.csv
+Raw Data: validation_adgbc_2026-09-10_17-09-44
+Metrics:accuracy=1.2052 ± 0.1426, precision=0.0206 ± 0.0055
+
+=============================== 3. adgbc one euro filter ===============================
+Validation: val_results_26_09_10-17-14.csv
+Raw Data: validation_adgbc_2026-09-10_17-15-52
+Metrics: accuracy=0.8345 ± 0.0696, precision=0.0205 ± 0.0064

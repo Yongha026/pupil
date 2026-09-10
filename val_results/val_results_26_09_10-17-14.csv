@@ -1,0 +1,6 @@
+date,time,model,gazer_class,accuracy_deg,accuracy_used_samples,accuracy_total_samples,precision_deg,precision_used_samples,precision_total_samples,outlier_threshold_deg,pupil_positions_count,ref_points_count,status
+2026-09-10,17:15:52,adgbc,Gazer2D,0.806,621,621,0.0296,617,620,2.5,2284,120,success
+2026-09-10,17:16:01,adgbc,Gazer2D,0.7697,627,627,0.0144,623,626,2.5,2350,120,success
+2026-09-10,17:16:10,adgbc,Gazer2D,0.7992,620,620,0.0148,616,619,2.5,2394,120,success
+2026-09-10,17:16:20,adgbc,Gazer2D,0.8292,578,578,0.0169,574,577,2.5,2230,120,success
+2026-09-10,17:16:29,adgbc,Gazer2D,0.9685,587,587,0.0267,583,586,2.5,2270,120,success
