@@ -1,1 +1,6 @@
 09.10 @raw_data: accuracy vs jitter for adgbc/2dcpp w/ w/o one euro filter
+1. 2dcpp no filter
+validation_2dcpp_2026-09-10_16-27-47: Accuracy=1.3483 deg, Precision=0.0654 deg
+2. 2dcpp one euro filter
+validation_2dcpp_2026-09-10_16-30-51: Accuracy=1.3502 deg, Precision=0.0817 deg
+3. adgbc no filter

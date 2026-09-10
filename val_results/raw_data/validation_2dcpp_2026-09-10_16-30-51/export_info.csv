@@ -1,0 +1,11 @@
+key,value
+session_type,validation
+model,2dcpp
+gazer_class,Gazer2D
+timestamp,2026-09-10_16-30-51
+accuracy_deg,1.35017
+precision_deg,0.08174
+outlier_threshold_deg,2.5
+pupil_count,4100
+ref_count,120
+gaze_count,2050
