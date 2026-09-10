@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 import csv
 from datetime import datetime
 import logging
-import math
 import os
 import traceback
 import typing as T
@@ -218,17 +217,16 @@ class Accuracy_Visualizer(Plugin):
         root_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
         )
-        self.val_dir = os.environ.get(
+        val_dir = os.environ.get(
             "PUPIL_VALIDATION_DIR", os.path.join(root_dir, "val_results")
         )
-        os.makedirs(self.val_dir, exist_ok=True)
+        os.makedirs(val_dir, exist_ok=True)
 
-        date_str = datetime.now().strftime("%y_%m_%d")
-        filename = f"validation_results_{date_str}.csv"
-        self.csv_path = os.path.join(self.val_dir, filename)
+        date_str = datetime.now().strftime("%y_%m_%d-%H-%M")
+        filename = f"val_results_{date_str}.csv"
+        self.csv_path = os.path.join(val_dir, filename)
 
-        # Raw data export toggle (enabled by default; CSV files are small ~150 KB each)
-        self.export_raw_data = True
+        self.export_raw_data =True
 
     def init_ui(self):
         from pyglui import ui
@@ -825,7 +823,7 @@ class Accuracy_Visualizer(Plugin):
                                 round(ang_err, 5) if ang_err is not None else None
                             ),
                             "is_outlier": (
-                                ang_err is not None and ang_err > outlier_thresh
+                                    ang_err is not None and ang_err > outlier_thresh
                             ),
                             "pupil_timestamp": pupil_ts,
                             "pupil_confidence": pupil_conf,
