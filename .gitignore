@@ -62,4 +62,4 @@ A
 # AD-GBC ckpts
 *.pth
 latency_example.png
-./logged_latencies/*.png
+./logged_latencies/
