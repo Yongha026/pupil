@@ -29,7 +29,7 @@ def get_audio_mode_list():
 
 
 def get_default_audio_mode():
-    return AUDIO_MODE_SOUND_ONLY
+    return AUDIO_MODE_SILENT
 
 
 _audio_mode = get_default_audio_mode()

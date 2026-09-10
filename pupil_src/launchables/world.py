@@ -138,23 +138,29 @@ def world(
     def detector_smoothing_setter(value: bool):
         is_on = bool(value)
         g_pool.pupil_detector_smoothing = is_on
-        n = {"subject": "pupil_detector.set_smoothing", "value": is_on}
-        ipc_pub.notify(n)
-        logger.info(f"Broadcasted pupil detector smoothing change to: {is_on}")
+        method = "one_euro" if is_on else "none"
+        g_pool.pupil_detector_smoothing_method = method
+        ipc_pub.notify({"subject": "pupil_detector.set_smoothing", "value": is_on})
+        ipc_pub.notify({"subject": "pupil_detector.set_smoothing_method", "method": method})
+        logger.info(f"Broadcasted pupil detector smoothing change to: {is_on} ({method})")
 
     SMOOTHING_METHODS = [
-        ("ema", "EMA (Heuristic)"),
         ("one_euro", "One-Euro Filter"),
+        ("ema", "EMA (Heuristic)"),
+        ("none", "No Smoothing"),
     ]
 
     def detector_smoothing_method_getter() -> str:
-        return str(getattr(g_pool, "pupil_detector_smoothing_method", "ema"))
+        return str(getattr(g_pool, "pupil_detector_smoothing_method", "one_euro"))
 
     def detector_smoothing_method_setter(value: str):
-        g_pool.pupil_detector_smoothing_method = str(value)
-        n = {"subject": "pupil_detector.set_smoothing_method", "method": str(value)}
-        ipc_pub.notify(n)
-        logger.info(f"Broadcasted pupil detector smoothing method change to: {value}")
+        method_str = str(value)
+        g_pool.pupil_detector_smoothing_method = method_str
+        is_on = (method_str != "none")
+        g_pool.pupil_detector_smoothing = is_on
+        ipc_pub.notify({"subject": "pupil_detector.set_smoothing_method", "method": method_str})
+        ipc_pub.notify({"subject": "pupil_detector.set_smoothing", "value": is_on})
+        logger.info(f"Broadcasted pupil detector smoothing method change to: {method_str}")
 
     try:
         from background_helper import IPC_Logging_Task_Proxy
@@ -529,7 +535,7 @@ def world(
             session_settings.get("pupil_detector_smoothing", True)
         )
         g_pool.pupil_detector_smoothing_method = str(
-            session_settings.get("pupil_detector_smoothing_method", "ema")
+            session_settings.get("pupil_detector_smoothing_method", "one_euro")
         )
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
@@ -579,7 +585,7 @@ def world(
                 })
                 ipc_pub.notify({
                     "subject": "pupil_detector.set_smoothing_method",
-                    "method": getattr(g_pool, "pupil_detector_smoothing_method", "ema"),
+                    "method": getattr(g_pool, "pupil_detector_smoothing_method", "one_euro"),
                 })
             elif subject == "set_min_calibration_confidence":
                 g_pool.min_calibration_confidence = noti["value"]

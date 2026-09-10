@@ -222,8 +222,8 @@ class Accuracy_Visualizer(Plugin):
         )
         os.makedirs(val_dir, exist_ok=True)
 
-        date_str = datetime.now().strftime("%y_%m_%d")
-        filename = f"validation_results_{date_str}.csv"
+        date_str = datetime.now().strftime("%y_%m_%d-%H-%M")
+        filename = f"val_results_{date_str}.csv"
         self.csv_path = os.path.join(val_dir, filename)
 
     def init_ui(self):
