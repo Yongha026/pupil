@@ -606,11 +606,11 @@ class Accuracy_Visualizer(Plugin):
             # Build gaze_pos from gazer or from cached gaze_list
             gaze_list_cached = getattr(self.recent_input, "gaze_list", None)
             if gaze_list_cached:
-                gaze_pos = gaze_list_cached
+                gaze_pos = list(gaze_list_cached)
             elif gazer_class is not None and gazer_params is not None:
                 try:
                     gazer = gazer_class(self.g_pool, params=gazer_params, register_as_active=False)
-                    gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
+                    gaze_pos = list(gazer.map_pupil_to_gaze(pupil_list))
                 except Exception as exc:
                     logger.warning(f"Could not map gaze for raw export: {exc}")
                     gaze_pos = []
@@ -623,14 +623,14 @@ class Accuracy_Visualizer(Plugin):
                 "norm_pos_x", "norm_pos_y", "diameter", "method",
                 "ellipse_center_x", "ellipse_center_y", "ellipse_axis_a",
                 "ellipse_axis_b", "ellipse_angle",
-                "diameter_3d", "model_confidence", "model_id",
-                "sphere_center_x", "sphere_center_y", "sphere_center_z", "sphere_radius",
-                "circle_3d_center_x", "circle_3d_center_y", "circle_3d_center_z",
-                "circle_3d_normal_x", "circle_3d_normal_y", "circle_3d_normal_z",
-                "circle_3d_radius", "theta", "phi",
-                "projected_sphere_center_x", "projected_sphere_center_y",
-                "projected_sphere_axis_a", "projected_sphere_axis_b",
-                "projected_sphere_angle",
+                # "diameter_3d", "model_confidence", "model_id",
+                # "sphere_center_x", "sphere_center_y", "sphere_center_z", "sphere_radius",
+                # "circle_3d_center_x", "circle_3d_center_y", "circle_3d_center_z",
+                # "circle_3d_normal_x", "circle_3d_normal_y", "circle_3d_normal_z",
+                # "circle_3d_radius", "theta", "phi",
+                # "projected_sphere_center_x", "projected_sphere_center_y",
+                # "projected_sphere_axis_a", "projected_sphere_axis_b",
+                # "projected_sphere_angle",
                 "raw_center_x", "raw_center_y", "raw_axis_a", "raw_axis_b",
                 "raw_angle", "raw_confidence", "pixel_jitter",
             ]
@@ -646,9 +646,9 @@ class Accuracy_Visualizer(Plugin):
                     raw_center = raw_el.get("center", (None, None))
                     raw_axes = raw_el.get("axes", (None, None))
                     norm = p.get("norm_pos", (None, None))
-                    sphere = p.get("sphere") or {}
-                    c3d = p.get("circle_3d") or {}
-                    psphere = p.get("projected_sphere") or {}
+                    # sphere = p.get("sphere") or {}
+                    # c3d = p.get("circle_3d") or {}
+                    # psphere = p.get("projected_sphere") or {}
                     row = {
                         "pupil_timestamp": str(p.get("timestamp")),
                         "world_index": "",
@@ -663,27 +663,27 @@ class Accuracy_Visualizer(Plugin):
                         "ellipse_axis_a": e_axes[0],
                         "ellipse_axis_b": e_axes[1],
                         "ellipse_angle": ellipse.get("angle"),
-                        "diameter_3d": p.get("diameter_3d"),
-                        "model_confidence": p.get("model_confidence"),
-                        "model_id": p.get("model_id"),
-                        "sphere_center_x": sphere.get("center", [None, None, None])[0],
-                        "sphere_center_y": sphere.get("center", [None, None, None])[1],
-                        "sphere_center_z": sphere.get("center", [None, None, None])[2],
-                        "sphere_radius": sphere.get("radius"),
-                        "circle_3d_center_x": c3d.get("center", [None, None, None])[0],
-                        "circle_3d_center_y": c3d.get("center", [None, None, None])[1],
-                        "circle_3d_center_z": c3d.get("center", [None, None, None])[2],
-                        "circle_3d_normal_x": c3d.get("normal", [None, None, None])[0],
-                        "circle_3d_normal_y": c3d.get("normal", [None, None, None])[1],
-                        "circle_3d_normal_z": c3d.get("normal", [None, None, None])[2],
-                        "circle_3d_radius": c3d.get("radius"),
-                        "theta": p.get("theta"),
-                        "phi": p.get("phi"),
-                        "projected_sphere_center_x": psphere.get("center", [None, None])[0],
-                        "projected_sphere_center_y": psphere.get("center", [None, None])[1],
-                        "projected_sphere_axis_a": psphere.get("axes", [None, None])[0],
-                        "projected_sphere_axis_b": psphere.get("axes", [None, None])[1],
-                        "projected_sphere_angle": psphere.get("angle"),
+                        # "diameter_3d": p.get("diameter_3d"),
+                        # "model_confidence": p.get("model_confidence"),
+                        # "model_id": p.get("model_id"),
+                        # "sphere_center_x": sphere.get("center", [None, None, None])[0],
+                        # "sphere_center_y": sphere.get("center", [None, None, None])[1],
+                        # "sphere_center_z": sphere.get("center", [None, None, None])[2],
+                        # "sphere_radius": sphere.get("radius"),
+                        # "circle_3d_center_x": c3d.get("center", [None, None, None])[0],
+                        # "circle_3d_center_y": c3d.get("center", [None, None, None])[1],
+                        # "circle_3d_center_z": c3d.get("center", [None, None, None])[2],
+                        # "circle_3d_normal_x": c3d.get("normal", [None, None, None])[0],
+                        # "circle_3d_normal_y": c3d.get("normal", [None, None, None])[1],
+                        # "circle_3d_normal_z": c3d.get("normal", [None, None, None])[2],
+                        # "circle_3d_radius": c3d.get("radius"),
+                        # "theta": p.get("theta"),
+                        # "phi": p.get("phi"),
+                        # "projected_sphere_center_x": psphere.get("center", [None, None])[0],
+                        # "projected_sphere_center_y": psphere.get("center", [None, None])[1],
+                        # "projected_sphere_axis_a": psphere.get("axes", [None, None])[0],
+                        # "projected_sphere_axis_b": psphere.get("axes", [None, None])[1],
+                        # "projected_sphere_angle": psphere.get("angle"),
                         "raw_center_x": raw_center[0],
                         "raw_center_y": raw_center[1],
                         "raw_axis_a": raw_axes[0],
@@ -699,11 +699,11 @@ class Accuracy_Visualizer(Plugin):
             gaze_fields = [
                 "gaze_timestamp", "world_index", "confidence",
                 "norm_pos_x", "norm_pos_y", "base_data",
-                "gaze_point_3d_x", "gaze_point_3d_y", "gaze_point_3d_z",
-                "eye_center0_3d_x", "eye_center0_3d_y", "eye_center0_3d_z",
-                "gaze_normal0_x", "gaze_normal0_y", "gaze_normal0_z",
-                "eye_center1_3d_x", "eye_center1_3d_y", "eye_center1_3d_z",
-                "gaze_normal1_x", "gaze_normal1_y", "gaze_normal1_z",
+                # "gaze_point_3d_x", "gaze_point_3d_y", "gaze_point_3d_z",
+                # "eye_center0_3d_x", "eye_center0_3d_y", "eye_center0_3d_z",
+                # "gaze_normal0_x", "gaze_normal0_y", "gaze_normal0_z",
+                # "eye_center1_3d_x", "eye_center1_3d_y", "eye_center1_3d_z",
+                # "gaze_normal1_x", "gaze_normal1_y", "gaze_normal1_z",
             ]
             gaze_path = os.path.join(out_dir, "gaze_positions.csv")
             with open(gaze_path, "w", newline="", encoding="utf-8") as f:
@@ -711,29 +711,29 @@ class Accuracy_Visualizer(Plugin):
                 writer.writeheader()
                 for g in gaze_pos:
                     norm = g.get("norm_pos", (None, None))
-                    gp3d = g.get("gaze_point_3d") or [None, None, None]
+                    # gp3d = g.get("gaze_point_3d") or [None, None, None]
                     base_data = g.get("base_data")
                     if base_data:
                         base_data = " ".join(
                             f"{b['timestamp']}-{b['id']}" for b in base_data
                         )
-                    ec3d = g.get("eye_centers_3d") or {}
-                    gn3d = g.get("gaze_normals_3d") or {}
-                    ec0 = ec3d.get("0", ec3d.get(0, [None, None, None]))
-                    ec1 = ec3d.get("1", ec3d.get(1, [None, None, None]))
-                    gn0 = gn3d.get("0", gn3d.get(0, [None, None, None]))
-                    gn1 = gn3d.get("1", gn3d.get(1, [None, None, None]))
-                    if not ec3d and g.get("eye_center_3d"):
-                        try:
-                            eye_id = str(g["base_data"][0]["id"])
-                        except (KeyError, IndexError, TypeError):
-                            eye_id = "0"
-                        if eye_id == "0":
-                            ec0 = g["eye_center_3d"]
-                            gn0 = g.get("gaze_normal_3d", [None, None, None])
-                        else:
-                            ec1 = g["eye_center_3d"]
-                            gn1 = g.get("gaze_normal_3d", [None, None, None])
+                    # ec3d = g.get("eye_centers_3d") or {}
+                    # gn3d = g.get("gaze_normals_3d") or {}
+                    # ec0 = ec3d.get("0", ec3d.get(0, [None, None, None]))
+                    # ec1 = ec3d.get("1", ec3d.get(1, [None, None, None]))
+                    # gn0 = gn3d.get("0", gn3d.get(0, [None, None, None]))
+                    # gn1 = gn3d.get("1", gn3d.get(1, [None, None, None]))
+                    # if not ec3d and g.get("eye_center_3d"):
+                    #     try:
+                    #         eye_id = str(g["base_data"][0]["id"])
+                    #     except (KeyError, IndexError, TypeError):
+                    #         eye_id = "0"
+                    #     if eye_id == "0":
+                    #         ec0 = g["eye_center_3d"]
+                    #         gn0 = g.get("gaze_normal_3d", [None, None, None])
+                    #     else:
+                    #         ec1 = g["eye_center_3d"]
+                    #         gn1 = g.get("gaze_normal_3d", [None, None, None])
                     row = {
                         "gaze_timestamp": str(g.get("timestamp")),
                         "world_index": "",
@@ -741,17 +741,17 @@ class Accuracy_Visualizer(Plugin):
                         "norm_pos_x": norm[0] if norm else None,
                         "norm_pos_y": norm[1] if norm else None,
                         "base_data": base_data,
-                        "gaze_point_3d_x": gp3d[0],
-                        "gaze_point_3d_y": gp3d[1],
-                        "gaze_point_3d_z": gp3d[2],
-                        "eye_center0_3d_x": ec0[0], "eye_center0_3d_y": ec0[1],
-                        "eye_center0_3d_z": ec0[2],
-                        "gaze_normal0_x": gn0[0], "gaze_normal0_y": gn0[1],
-                        "gaze_normal0_z": gn0[2],
-                        "eye_center1_3d_x": ec1[0], "eye_center1_3d_y": ec1[1],
-                        "eye_center1_3d_z": ec1[2],
-                        "gaze_normal1_x": gn1[0], "gaze_normal1_y": gn1[1],
-                        "gaze_normal1_z": gn1[2],
+                        # "gaze_point_3d_x": gp3d[0],
+                        # "gaze_point_3d_y": gp3d[1],
+                        # "gaze_point_3d_z": gp3d[2],
+                        # "eye_center0_3d_x": ec0[0], "eye_center0_3d_y": ec0[1],
+                        # "eye_center0_3d_z": ec0[2],
+                        # "gaze_normal0_x": gn0[0], "gaze_normal0_y": gn0[1],
+                        # "gaze_normal0_z": gn0[2],
+                        # "eye_center1_3d_x": ec1[0], "eye_center1_3d_y": ec1[1],
+                        # "eye_center1_3d_z": ec1[2],
+                        # "gaze_normal1_x": gn1[0], "gaze_normal1_y": gn1[1],
+                        # "gaze_normal1_z": gn1[2],
                     }
                     writer.writerow(row)
             logger.info(f"Raw export: wrote {len(gaze_pos)} gaze rows -> {gaze_path}")
@@ -886,10 +886,10 @@ class Accuracy_Visualizer(Plugin):
         gaze_list=None,
     ) -> AccuracyPrecisionResult:
         if gaze_list:
-            gaze_pos = gaze_list
+            gaze_pos = list(gaze_list)
         else:
             gazer = gazer_class(g_pool, params=gazer_params, register_as_active=False)
-            gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
+            gaze_pos = list(gazer.map_pupil_to_gaze(pupil_list))
         ref_pos = ref_list
 
         try:
