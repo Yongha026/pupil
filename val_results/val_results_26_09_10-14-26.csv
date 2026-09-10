@@ -4,4 +4,4 @@ date,time,model,gazer_class,accuracy_deg,accuracy_used_samples,accuracy_total_sa
 2026-09-10,14:27:48,adgbc,Gazer2D,0.4154,625,625,0.0149,621,624,2.5,2434,120,success
 2026-09-10,14:27:58,adgbc,Gazer2D,0.5304,607,607,0.0195,603,606,2.5,2276,120,success
 2026-09-10,14:28:06,adgbc,Gazer2D,0.485,586,586,0.0151,582,585,2.5,2222,120,success
-# "adgbc, one euro filter"
+# "adgbc+one_euro"

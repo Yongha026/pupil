@@ -7,3 +7,9 @@ model: adgbc, total 5 runs, accuracy=1.9719 ± 0.2413, precision=0.2496 ± 0.006
           400보다는 192 모델 사용하는게 나을 듯 하다.
 model: adgbc, total 5 runs, accuracy=0.8222 ± 0.0654, precision=0.0283 ± 0.0053
 model: 2dcpp, total 5 runs, accuracy=0.6557 ± 0.0462, precision=0.0722 ± 0.0048
+26.09.10 Smoothing 방법 변경
+model: 2dcpp+one_euro , total 5 runs, accuracy=1.2176 ± 0.0969, precision=0.0675 ± 0.0026
+model: 2dcpp_no_smooth, total 5 runs, accuracy=0.6167 ± 0.0728, precision=0.0670 ± 0.0038
+model: adgbc+one_euro , total 5 runs, accuracy=0.4328 ± 0.0662, precision=0.0188 ± 0.0053
+model: adgbc_no_smooth, total 5 runs, accuracy=0.6476 ± 0.1357, precision=0.0223 ± 0.0036
+
