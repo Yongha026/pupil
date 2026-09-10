@@ -27,9 +27,6 @@ settings/
 *.db
 *.npy
 
-*.log
-
-
 # IDE generated files #
 .floo
 .flooignore
