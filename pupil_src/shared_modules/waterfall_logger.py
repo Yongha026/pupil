@@ -49,6 +49,7 @@ class WaterfallLogger:
             "preprocess_ms",            # gamma LUT, CLAHE 등    @detector_2d_nn_plugin.py
             "inference_ms",             # 동공 세그멘트 시간    @detector_2d_nn_plugin.py
             "ellipse_fit_ms",           # 추론 후 동공 타원 피팅 시간  @detector_2d_nn_plugin.py
+            "filter_ms",                # 시간 필터링(One-Euro / EMA) 시간 @detector_2d_nn_plugin.py
             "pye3d_ms",                 # pye3d(3d 안구 모델) 추론시간 => 3D 안구 중심, 3d gaze 벡터  @pye3d_plugin.py
             "ipc_transport_ms",         # eye.py, world.py 데이터 주고받은 시간(pupil data)  @eye.py send() - @pupil_data_relay.py recv()
             "gaze_mapping_ms",          # 3d -> 2d gaze로 gaze mapping   @puipl_data_relay.py
