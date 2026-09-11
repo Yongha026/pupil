@@ -9,8 +9,9 @@ import argparse
 import torchvision
 import PIL.Image
 from tqdm import tqdm
-import matplotlib.pyplot as plt # 추가
-from torch.utils.data import Dataset, DataLoader # 추가
+import matplotlib.pyplot as plt
+from torch.utils.data import Dataset, DataLoader
+import random
 
 clahe = cv2.createCLAHE(
     clipLimit=1.5, tileGridSize=(8, 8)
@@ -80,9 +81,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     image_path = os.path.join(args.IMG_PATH, "*.png")
-    images = glob.glob(image_path)
+    full_images = glob.glob(image_path)
+    rand_images = random.sample(full_images, 96)
 
-    dataset = ImageDataset(images)
+    dataset = ImageDataset(rand_images)
     dataloader = DataLoader(dataset, batch_size=16, num_workers=4, pin_memory=True)
 
     enc_features = []
