@@ -413,15 +413,5 @@ class GBC_S_EncDec(nn.Module):
 
         out = self.final(out)
 
-        if self.training:
-            # 将所有计算loss所需的中间变量打包
-            loss_intermediates = {
-                "att_1": att_t3, "dif_1": dif_t3,
-                "att_2": att_out, "dif_2": dif_out
-            }
-            return out, loss_intermediates
-        else:
-            # 在评估/推理时，只返回分割结果
-            return out
 
         return out, enc_feature, dec_feature
