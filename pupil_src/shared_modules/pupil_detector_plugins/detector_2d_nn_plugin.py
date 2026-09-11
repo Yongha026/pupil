@@ -248,10 +248,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.enable_smoothing = bool(enable_smoothing)
 
         # Resolve smoothing method (One-Euro filter is default / initial)
-        # if "enable_smoothing" in kwargs and not kwargs["enable_smoothing"]:
-        #     smoothing_method = "none"
-        # elif not enable_smoothing:
-        if not self.enable_smoothing:
+        if "enable_smoothing" in kwargs and not kwargs["enable_smoothing"]:
+            smoothing_method = "none"
+        elif not self.enable_smoothing:
             smoothing_method = "none"
         if hasattr(self.g_pool, "pupil_detector_smoothing_method") and self.g_pool.pupil_detector_smoothing_method:
             smoothing_method = str(self.g_pool.pupil_detector_smoothing_method)
@@ -556,6 +555,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     # Detection Loop
     # -------------------------------------------------------------------------
     def detect(self, frame, **kwargs) -> Dict:
+        now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+
         if self.active_model == "2dcpp":
             datum = self._detect_2dcpp(frame, **kwargs)
         else:
@@ -598,22 +599,83 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         else:
             confidence = raw_conf
 
+        # Temporal Smoothing
+        t_filter_start = time.perf_counter()
+        ellipse_dict = result.get("ellipse")
+        if ellipse_dict and ellipse_dict.get("center") and ellipse_dict.get("axes"):
+            cx, cy = ellipse_dict["center"]
+            minor_d, major_d = ellipse_dict["axes"]
+            angle_deg = ellipse_dict["angle"]
+
+            if self._smoothing_method == "one_euro":
+                cx, cy, minor_d, major_d, angle_deg = self._one_euro_filter.filter(
+                    float(cx), float(cy), float(minor_d), float(major_d), float(angle_deg), frame.timestamp
+                )
+                self._prev_ellipse = ((cx, cy), (minor_d, major_d), angle_deg)
+                self._consecutive_jumps = 0
+            elif self._smoothing_method == "ema":
+                if self._prev_ellipse is not None:
+                    p_c, p_ax, p_ang = self._prev_ellipse
+                    dist = np.sqrt((cx - p_c[0]) ** 2 + (cy - p_c[1]) ** 2)
+                    if dist > 40.0:
+                        self._consecutive_jumps += 1
+                        if self._consecutive_jumps < 5:
+                            raw_conf = 0.0
+                            cx, cy = p_c
+                            minor_d, major_d = p_ax
+                            angle_deg = p_ang
+                        else:
+                            self._consecutive_jumps = 0
+                    else:
+                        self._consecutive_jumps = 0
+
+                    a = self.smooth_alpha
+                    cx = a * cx + (1.0 - a) * p_c[0]
+                    cy = a * cy + (1.0 - a) * p_c[1]
+                    minor_d = a * minor_d + (1.0 - a) * p_ax[0]
+                    major_d = a * major_d + (1.0 - a) * p_ax[1]
+                    diff_ang = (angle_deg - p_ang + 90.0) % 180.0 - 90.0
+                    angle_deg = (p_ang + a * diff_ang) % 180.0
+                else:
+                    self._consecutive_jumps = 0
+                self._prev_ellipse = ((cx, cy), (minor_d, major_d), angle_deg)
+            else:
+                self._prev_ellipse = None
+                self._consecutive_jumps = 0
+                if hasattr(self, "_one_euro_filter"):
+                    self._one_euro_filter.reset()
+
+            result_location = (float(cx), float(cy))
+            result_diameter = float(major_d)
+            result_ellipse = {
+                "axes": (float(minor_d), float(major_d)),
+                "angle": float(angle_deg),
+                "center": (float(cx), float(cy)),
+            }
+        else:
+            self._prev_ellipse = None
+            self._consecutive_jumps = 0
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
+            result_location = result["location"]
+            result_diameter = result["diameter"]
+            result_ellipse = result["ellipse"]
+
+        t_filter_end = time.perf_counter()
+        filter_ms = (t_filter_end - t_filter_start) * 1000.0 if self._smoothing_method != "none" else 0.0
+
         norm_pos = normalize(
-            result["location"], (frame.width, frame.height), flip_y=True
+            result_location, (frame.width, frame.height), flip_y=True
         )
 
         datum = self.create_pupil_datum(
             norm_pos=norm_pos,
-            diameter=result["diameter"],
+            diameter=result_diameter,
             confidence=confidence,
             timestamp=frame.timestamp,
         )
         datum["raw_confidence"] = raw_conf
-        datum["ellipse"] = {
-            "axes": result["ellipse"]["axes"],
-            "angle": result["ellipse"]["angle"],
-            "center": result["ellipse"]["center"],
-        }
+        datum["ellipse"] = result_ellipse
 
         # Capture ingestion latency from monotonic clock
         now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
@@ -629,9 +691,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             "preprocess_ms": 0.0,
             "inference_ms": infer_ms,
             "ellipse_fit_ms": 0.0,
+            "filter_ms": filter_ms,
             "pye3d_ms": 0.0,
             "t_detect_start": t_detect_start,
-            "t_detect_end": t_infer_end,
+            "t_detect_end": t_filter_end,
         }
 
         return datum
@@ -729,7 +792,11 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
+        t_ellipse_end = time.perf_counter()
+        ellipse_fit_ms = (t_ellipse_end - t_post_start) * 1000.0
+
         # 3. Temporal Smoothing (Strictly divided by self._smoothing_method)
+        t_filter_start = time.perf_counter()
         if self._smoothing_method == "one_euro":
             # --- One-Euro Filter (Speed-adaptive low-pass filter per Casiez et al.) ---
             cx, cy, minor_d, major_d, angle_deg = self._one_euro_filter.filter(
@@ -776,6 +843,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
 
+        t_filter_end = time.perf_counter()
+        filter_ms = (t_filter_end - t_filter_start) * 1000.0 if self._smoothing_method != "none" else 0.0
+
         if raw_conf < self.confidence_threshold:
             confidence = 0.0
         else:
@@ -785,10 +855,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         prep_ms = (t_prep_end - t_prep_start) * 1000.0
         infer_ms = (t_infer_end - t_infer_start) * 1000.0
-        post_ms = (t_post_end - t_post_start) * 1000.0
 
         # Estimate capture ingestion latency from monotonic clock
-        now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+        # now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
         capture_ts = getattr(frame, "timestamp", now_ts)
         ingest_ms = max(0.05, (now_ts - capture_ts) * 1000.0) if capture_ts > 0 else 1.0
 
@@ -826,7 +895,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             "roi_ms": 0.0,  # 0.0 for neural network models (no ROI cropping)
             "preprocess_ms": prep_ms,
             "inference_ms": infer_ms,
-            "ellipse_fit_ms": post_ms,
+            "ellipse_fit_ms": ellipse_fit_ms,
+            "filter_ms": filter_ms,
             "pye3d_ms": 0.0,
             "t_detect_start": t_detect_start,
             "t_detect_end": t_post_end,

@@ -63,6 +63,7 @@ class Pupil_Data_Relay(System_Plugin_Base):
                 preprocess_ms = float(timing.get("preprocess_ms", 0.0))
                 inference_ms = float(timing.get("inference_ms", 0.0))
                 ellipse_fit_ms = float(timing.get("ellipse_fit_ms", 0.0))
+                filter_ms = float(timing.get("filter_ms", 0.0))
                 pye3d_ms = float(timing.get("pye3d_ms", 0.0))
 
                 total_system_latency_ms = (
@@ -71,6 +72,7 @@ class Pupil_Data_Relay(System_Plugin_Base):
                     + preprocess_ms
                     + inference_ms
                     + ellipse_fit_ms
+                    + filter_ms
                     + pye3d_ms
                     + ipc_transport_ms
                     + gaze_mapping_ms
@@ -96,6 +98,7 @@ class Pupil_Data_Relay(System_Plugin_Base):
                         "preprocess_ms": preprocess_ms,
                         "inference_ms": inference_ms,
                         "ellipse_fit_ms": ellipse_fit_ms,
+                        "filter_ms": filter_ms,
                         "pye3d_ms": pye3d_ms,
                         "ipc_transport_ms": ipc_transport_ms,
                         "gaze_mapping_ms": gaze_mapping_ms,

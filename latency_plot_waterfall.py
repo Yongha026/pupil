@@ -35,12 +35,15 @@ def get_pipeline_stages(model_name: str = "pmrnet", roi_val: float = 0.0) -> Lis
     Returns the appropriate pipeline stages based on active model and ROI usage:
     - 2dcpp: Includes ROI Extraction and 2D Detection (C++), omits NN Preprocessing/Ellipse Fit.
     - Neural Net models: Omits ROI Extraction (since roi_ms == 0.0), includes Preprocessing, NN Inference, Contour/Ellipse fit.
+    Both include Temporal Filtering (One-Euro / EMA).
     """
-    if model_name == "2dcpp" or roi_val > 0.001:
+    is_2dcpp = model_name.startswith("2dcpp") or roi_val > 0.001
+    if is_2dcpp:
         return [
             ("Camera Ingest", "UVC_Source", "Capture Latency"),
             ("ROI Extraction", "Roi", "Capture Latency"),
             ("2D Detection (C++)", "Detector2D", "Processing Latency"),
+            ("Temporal Filtering", "OneEuro/EMA", "Processing Latency"),
             ("3D Eye Model", "Pye3D", "Processing Latency"),
             ("ZeroMQ IPC Transport", "ZeroMQ Socket", "Transport Latency"),
             ("World Gaze Mapping", "Gazer3D", "Transport Latency"),
@@ -53,6 +56,7 @@ def get_pipeline_stages(model_name: str = "pmrnet", roi_val: float = 0.0) -> Lis
             ("Pupil Preprocessing", "nnUNet (CLAHE/LUT)", "Processing Latency"),
             ("Neural Net Inference", "nnUNet (GPU Forward)", "Processing Latency"),
             ("Contour & Ellipse Fit", "nnUNet (fitEllipse)", "Processing Latency"),
+            ("Temporal Filtering", "OneEuro/EMA", "Processing Latency"),
             ("3D Eye Model", "Pye3D", "Processing Latency"),
             ("ZeroMQ IPC Transport", "ZeroMQ Socket", "Transport Latency"),
             ("World Gaze Mapping", "Gazer3D", "Transport Latency"),
@@ -96,6 +100,7 @@ def load_waterfall_data(csv_path: str) -> Tuple[Dict[str, float], Dict[str, floa
         "preprocess_ms",
         "inference_ms",
         "ellipse_fit_ms",
+        "filter_ms",
         "pye3d_ms",
         "ipc_transport_ms",
         "gaze_mapping_ms",
@@ -130,8 +135,9 @@ def load_waterfall_data(csv_path: str) -> Tuple[Dict[str, float], Dict[str, floa
         "ingest_ms": "Camera Ingest",
         "roi_ms": "ROI Extraction",
         "preprocess_ms": "Pupil Preprocessing",
-        "inference_ms": "2D Detection (C++)" if model_name == "2dcpp" else "Neural Net Inference",
+        "inference_ms": "2D Detection (C++)" if model_name.startswith("2dcpp") else "Neural Net Inference",
         "ellipse_fit_ms": "Contour & Ellipse Fit",
+        "filter_ms": "Temporal Filtering",
         "pye3d_ms": "3D Eye Model",
         "ipc_transport_ms": "ZeroMQ IPC Transport",
         "gaze_mapping_ms": "World Gaze Mapping",
@@ -173,6 +179,7 @@ def load_waterfall_models_data(csv_path: str) -> Dict[str, Dict[str, float]]:
         "preprocess_ms",
         "inference_ms",
         "ellipse_fit_ms",
+        "filter_ms",
         "pye3d_ms",
         "ipc_transport_ms",
         "gaze_mapping_ms",
@@ -211,8 +218,9 @@ def load_waterfall_models_data(csv_path: str) -> Dict[str, Dict[str, float]]:
             "ingest_ms": "Camera Ingest",
             "roi_ms": "ROI Extraction",
             "preprocess_ms": "Pupil Preprocessing",
-            "inference_ms": "2D Detection (C++)" if model_name == "2dcpp" else "Neural Net Inference",
+            "inference_ms": "2D Detection (C++)" if model_name.startswith("2dcpp") else "Neural Net Inference",
             "ellipse_fit_ms": "Contour & Ellipse Fit",
+            "filter_ms": "Temporal Filtering",
             "pye3d_ms": "3D Eye Model",
             "ipc_transport_ms": "ZeroMQ IPC Transport",
             "gaze_mapping_ms": "World Gaze Mapping",
@@ -500,6 +508,7 @@ def main():
                 "2D Detection (C++)",
                 "Neural Net Inference",
                 "Contour & Ellipse Fit",
+                "Temporal Filtering",
                 "3D Eye Model",
                 "ZeroMQ IPC Transport",
                 "World Gaze Mapping",
@@ -537,6 +546,22 @@ def main():
                     else:
                         row_vals.append(f"{'-':>{col_w}}")
                 print(f"{s_name:<25} {cat:<20}" + "".join(row_vals))
+
+            COMPUTE_STAGES = [
+                "ROI Extraction",
+                "Pupil Preprocessing",
+                "2D Detection (C++)",
+                "Neural Net Inference",
+                "Contour & Ellipse Fit",
+                "Temporal Filtering",
+                "3D Eye Model",
+            ]
+            compute_totals = {}
+            for m in models_list:
+                compute_totals[m] = sum(models_data[m].get(s, 0.0) for s in COMPUTE_STAGES)
+            comp_vals = "".join(f"{compute_totals[m]:>{col_w}.2f}" for m in models_list)
+            print("-" * total_w)
+            print(f"{'PROCESSING COMPUTE LATENCY':<45}" + comp_vals)
             print("=" * total_w)
             tot_vals = "".join(f"{model_totals[m]:>{col_w}.2f}" for m in models_list)
             print(f"{'TOTAL SYSTEM LATENCY':<45}" + tot_vals)
@@ -610,6 +635,10 @@ def main():
                 ss_val = steady_state.get(name, 0.0)
                 cs_val = cold_start.get(name, 0.0)
                 print(f"{name:<26} {cat:<20} {ss_val:>18.2f} {cs_val:>15.2f}")
+            print("-" * 80)
+            ss_comp = sum(steady_state.get(n, 0.0) for n, _, cat in active_stages if cat == "Processing Latency" or n == "ROI Extraction")
+            cs_comp = sum(cold_start.get(n, 0.0) for n, _, cat in active_stages if cat == "Processing Latency" or n == "ROI Extraction")
+            print(f"{'PROCESSING COMPUTE LATENCY':<47} {ss_comp:>18.2f} {cs_comp:>15.2f}")
             print("=" * 80)
             ss_tot = sum(steady_state.get(n, 0.0) for n, _, _ in active_stages)
             cs_tot = sum(cold_start.get(n, 0.0) for n, _, _ in active_stages)
