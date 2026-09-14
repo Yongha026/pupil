@@ -487,7 +487,9 @@ class Accuracy_Visualizer(Plugin):
             ]
 
             now = datetime.now()
-            model_name = getattr(self.g_pool, "pupil_detector_model", "unknown")
+            model_name = str(getattr(self.g_pool, "pupil_detector_model", "unknown"))
+            smoothing_method = str(getattr(self.g_pool, "pupil_detector_smoothing_method", "one_euro"))
+            model_smooth = model_name+'_'+smoothing_method
             gazer_name = getattr(self.recent_input, "gazer_class_name", "unknown")
 
             acc_val = (
@@ -515,7 +517,7 @@ class Accuracy_Visualizer(Plugin):
             row = {
                 "date": now.strftime("%Y-%m-%d"),
                 "time": now.strftime("%H:%M:%S"),
-                "model": model_name,
+                "model": model_smooth,
                 "gazer_class": gazer_name,
                 "accuracy_deg": acc_val,
                 "accuracy_used_samples": acc_used,
@@ -541,7 +543,7 @@ class Accuracy_Visualizer(Plugin):
 
             logger.info(
                 f"Validation result appended to {self.csv_path}: "
-                f"Accuracy={acc_val} deg, Precision={prec_val} deg (Model: {model_name})"
+                f"Accuracy={acc_val} deg, Precision={prec_val} deg (Model: {model_smooth})"
             )
         except Exception as e:
             logger.error(f"Failed to export validation result to CSV: {e}")

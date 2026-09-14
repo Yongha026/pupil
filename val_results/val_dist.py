@@ -21,7 +21,7 @@ def find_latest_validation_csv(base_dir: Optional[str] = None) -> Optional[str]:
     ]
     for d in search_dirs:
         if os.path.isdir(d):
-            candidates.extend(glob.glob(os.path.join(d, "validation_results_*.csv")))
+            candidates.extend(glob.glob(os.path.join(d, "val_results_*.csv")))
 
     if not candidates:
         return None
