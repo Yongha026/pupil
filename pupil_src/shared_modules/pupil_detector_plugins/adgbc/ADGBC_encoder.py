@@ -366,9 +366,10 @@ class GBC_S_EncDec(nn.Module):
         out = self.pool2(out)
         out = self.conv3(out)
         t3 = out
-        enc_feature= t3
+        # enc_feature= t3
         t3_gbc, att_t3, _, dif_t3 = self.gbc(t3)
         out = self.pool3(t3_gbc)
+        enc_feature = t3_gbc # GBC feature add 후의 encoder feature
 
         ### Stage 4
         out, H, W = self.FIBlock1(out)
@@ -404,6 +405,7 @@ class GBC_S_EncDec(nn.Module):
         dec_feature = out
         out, att_out, _, dif_out = self.gbc(out)
         out = torch.add(out, t3_gbc)  # 与经过GBC处理的t3进行跳跃连接
+        # dec_feature = out # GBC refinement add 후의 feature
 
         out = F.interpolate(self.decoder3(out), scale_factor=(2, 2), mode='bilinear')
         out = torch.add(out, t2)
