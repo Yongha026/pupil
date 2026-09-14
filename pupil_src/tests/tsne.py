@@ -114,6 +114,8 @@ if __name__ == '__main__':
         for batch_imgs, batch_masks in tqdm(dataloader):
             batch_imgs = batch_imgs.to(device)
             _, enc, _ = model(batch_imgs)  # [B, 64, 48, 48]
+            # _, _, enc = model(batch_imgs)  # [B, 64, 48, 48]
+
 
             B, C, H, W = enc.shape
 
@@ -160,7 +162,7 @@ if __name__ == '__main__':
 
         ticks = [0, 1]
         tick_labels = ['Else', 'Pupil']
-        save_filename = "OpenEDS2019_Enc_pixel_features_tsne_pupil_only.png"
+        save_filename = "OpenEDS2019_GBC_features_GBCADD_tsne_pupil_only.png"
     else:
         # 기존 4개 클래스 유지
         y_plot = y
@@ -168,7 +170,7 @@ if __name__ == '__main__':
 
         ticks = [0, 1, 2, 3]
         tick_labels = ['Background', 'Sclera', 'Iris', 'Pupil']
-        save_filename = "PupilLabs_Enc_pixel_features_tsne.png"
+        save_filename = "OpenEDS2019_GBC_features_tsne.png"
 
     # 시각화
     plt.figure(figsize=(10, 8))
@@ -190,6 +192,6 @@ if __name__ == '__main__':
     cbar.set_label('Class ID')
 
     plt.title("Pixel-wise Deep Feature Clustering (t-SNE)")
-
+    save_path = os.path.join("./pupil_src/tests/tsne_results", save_filename)
     plt.savefig(save_filename, dpi=300)
     plt.close()
