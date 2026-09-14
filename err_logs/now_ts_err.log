@@ -1,0 +1,198 @@
+(pupil_nnunets) byeongjun@server3:~/PycharmProjects/pupil_nnunets$ python pupil_src/main.py 
+Session latency logging to: /home/byeongjun/PycharmProjects/pupil_nnunets/logged_latencies/latency_2026-09-14_15-18-09.csv
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+[15:18:22] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:343
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:343
+[15:18:23] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:446
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:446
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           ERROR    eye0 - launchables.eye: Process Eye0 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 713, in eye                                                                                             
+                        plugin.recent_events(event)                                                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_base_plugin.py", line 122, in recent_events                                        
+                        detection_result = self.detect(                                                                                                                                                               
+                                           ^^^^^^^^^^^^                                                                                                                                                               
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 563, in detect                                              
+                        datum = self._detect_nn(frame, **kwargs)                                                                                                                                                      
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                      
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 861, in _detect_nn                                          
+                        capture_ts = getattr(frame, "timestamp", now_ts)                                                                                                                                              
+                                                                 ^^^^^^                                                                                                                                               
+                    NameError: name 'now_ts' is not defined                                                                                                                                                           
+                                                                                                                                                                                                                      
+           ERROR    eye1 - launchables.eye: Process Eye1 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 713, in eye                                                                                             
+                        plugin.recent_events(event)                                                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_base_plugin.py", line 122, in recent_events                                        
+                        detection_result = self.detect(                                                                                                                                                               
+                                           ^^^^^^^^^^^^                                                                                                                                                               
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 563, in detect                                              
+                        datum = self._detect_nn(frame, **kwargs)                                                                                                                                                      
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                      
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 861, in _detect_nn                                          
+                        capture_ts = getattr(frame, "timestamp", now_ts)                                                                                                                                              
+                                                                 ^^^^^^                                                                                                                                               
+                    NameError: name 'now_ts' is not defined                                                                                                                                                           
+                                                                                                                                                                                                                      
+[15:18:24] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:339
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:339
+           WARNING  world - uvc: Turbojpeg jpeg2yuv: b'Corrupt JPEG data: 3 extraneous bytes before marker 0xd1'                                                                                    uvc_backend.py:879
+           WARNING  world - launchables.world: Resetting all settings and restarting Capture.                                                                                                             world.py:639
+Clearing /home/byeongjun/PycharmProjects/pupil_nnunets/capture_settings/user_settings_world...
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+[15:18:32] ERROR    world - launchables.world: Process Capture crashed with trace:                                                                                                                        world.py:976
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 867, in world                                                                                         
+                        p.recent_events(events)                                                                                                                                                                       
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/video_capture/uvc_backend.py", line 459, in recent_events                                                          
+                        frame = self.uvc_capture.get_frame(0.1)                                                                                                                                                       
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                       
+                      File "uvc_bindings.pyx", line 705, in uvc_bindings.Capture.get_frame                                                                                                                            
+                    TimeoutError                                                                                                                                                                                      
+                                                                                                                                                                                                                      
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+Process world:
+Traceback (most recent call last):
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 867, in world
+    p.recent_events(events)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/video_capture/uvc_backend.py", line 459, in recent_events
+    frame = self.uvc_capture.get_frame(0.1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvc_bindings.pyx", line 705, in uvc_bindings.Capture.get_frame
+TimeoutError
+[15:18:33] INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:343
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:343
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:446
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:446
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+[15:18:34] ERROR    eye1 - launchables.eye: Process Eye1 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 713, in eye                                                                                             
+                        plugin.recent_events(event)                                                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_base_plugin.py", line 122, in recent_events                                        
+                        detection_result = self.detect(                                                                                                                                                               
+                                           ^^^^^^^^^^^^                                                                                                                                                               
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 563, in detect                                              
+                        datum = self._detect_nn(frame, **kwargs)                                                                                                                                                      
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                      
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 861, in _detect_nn                                          
+                        capture_ts = getattr(frame, "timestamp", now_ts)                                                                                                                                              
+                                                                 ^^^^^^                                                                                                                                               
+                    NameError: name 'now_ts' is not defined                                                                                                                                                           
+                                                                                                                                                                                                                      
+           ERROR    eye0 - launchables.eye: Process Eye0 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 713, in eye                                                                                             
+                        plugin.recent_events(event)                                                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_base_plugin.py", line 122, in recent_events                                        
+                        detection_result = self.detect(                                                                                                                                                               
+                                           ^^^^^^^^^^^^                                                                                                                                                               
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 563, in detect                                              
+                        datum = self._detect_nn(frame, **kwargs)                                                                                                                                                      
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                      
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 861, in _detect_nn                                          
+                        capture_ts = getattr(frame, "timestamp", now_ts)                                                                                                                                              
+                                                                 ^^^^^^                                                                                                                                               
+                    NameError: name 'now_ts' is not defined                                                                                                                                                           
+                                                                                                                                                                                                                      
+[15:18:35] INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:339
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:339
+(pupil_nnunets) byeongjun@server3:~/PycharmProjects/pupil_nnunets$ python pupil_src/main.py 
+Session latency logging to: /home/byeongjun/PycharmProjects/pupil_nnunets/logged_latencies/latency_2026-09-14_15-18-48.csv
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:441: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/transformers/utils/generic.py:309: FutureWarning: `torch.utils._pytree._register_pytree_node` is deprecated. Please use `torch.utils._pytree.register_pytree_node` instead.
+  _torch_pytree._register_pytree_node(
+[15:18:55] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:343
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Loading 'adgbc' onto cuda...                                                                                     detector_2d_nn_plugin.py:343
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:446
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Successfully loaded AD-GBC weights from                                                                          detector_2d_nn_plugin.py:446
+                    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth                                                                       
+           ERROR    eye1 - launchables.eye: Process Eye1 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 713, in eye                                                                                             
+                        plugin.recent_events(event)                                                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_base_plugin.py", line 122, in recent_events                                        
+                        detection_result = self.detect(                                                                                                                                                               
+                                           ^^^^^^^^^^^^                                                                                                                                                               
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 563, in detect                                              
+                        datum = self._detect_nn(frame, **kwargs)                                                                                                                                                      
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                      
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 861, in _detect_nn                                          
+                        capture_ts = getattr(frame, "timestamp", now_ts)                                                                                                                                              
+                                                                 ^^^^^^                                                                                                                                               
+                    NameError: name 'now_ts' is not defined                                                                                                                                                           
+                                                                                                                                                                                                                      
+           ERROR    eye0 - launchables.eye: Process Eye0 crashed with trace:                                                                                                                                 eye.py:41
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/eye.py", line 713, in eye                                                                                             
+                        plugin.recent_events(event)                                                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_base_plugin.py", line 122, in recent_events                                        
+                        detection_result = self.detect(                                                                                                                                                               
+                                           ^^^^^^^^^^^^                                                                                                                                                               
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 563, in detect                                              
+                        datum = self._detect_nn(frame, **kwargs)                                                                                                                                                      
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                      
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/detector_2d_nn_plugin.py", line 861, in _detect_nn                                          
+                        capture_ts = getattr(frame, "timestamp", now_ts)                                                                                                                                              
+                                                                 ^^^^^^                                                                                                                                               
+                    NameError: name 'now_ts' is not defined                                                                                                                                                           
+                                                                                                                                                                                                                      
+[15:18:56] INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:339
+           INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache. 
