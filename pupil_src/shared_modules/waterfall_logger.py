@@ -37,12 +37,15 @@ class WaterfallLogger:
         self.buffer = []
         self.frame_count = 0
         self.header_written = os.path.exists(self.log_path)
+        self.is_logging_active: bool = False
+        self.current_session_type: Optional[str] = None
         # @pupil_data_relay.py에서 모든 데이터 취합 후 waterfall logger로 전송.
         # 아직 render는 하지 않았으니 해당 데이터 없으면(첫 번째 loop) 0.0으로 fallback.
         self.fieldnames = [
             "frame_id",
             "process",                  # eye0 / eye1
             "model",                    # 추론 모델(2dcpp, pmrnet, ...)
+            "session_type",             # calibration / validation
             "phase",                    # 콜드스타트(boot) / 안정후 loop(loop)
             "ingest_ms",                # eye 카메라 -> 프로세스 전송시간 @detector_2d_nn_plugin. 현재시간 - frame에 찍혀있는 timestamp
             "roi_ms",                   # 2dcpp 사용시 ROI 설정시간(딥러닝 모델 사용시 X)  @detector_2d_nn_plugin.py
@@ -60,12 +63,37 @@ class WaterfallLogger:
             "t_end",                    # 해당 프레임 처리 종료시간    @detector_2d_nn_plugin.py
         ]
 
+    def start_session(self, session_type: str = "session"):
+        """Activate latency logging for an ongoing calibration or validation session."""
+        with _lock:
+            self.is_logging_active = True
+            self.current_session_type = session_type
+            logger.info(f"Waterfall logging started ({session_type}) -> {self.log_path}")
+
+    def stop_session(self):
+        """Deactivate latency logging and flush remaining traces to disk."""
+        with _lock:
+            if not self.is_logging_active:
+                return
+            self.flush()
+            prev_session = self.current_session_type
+            self.is_logging_active = False
+            self.current_session_type = None
+            logger.info(f"Waterfall logging stopped ({prev_session}) -> {self.log_path}")
+
     def log_frame_trace(self, trace_data: Dict):
         """Buffer a completed frame's sequential pipeline stages."""
+        if not self.is_logging_active:
+            return
+
         with _lock:
+            if not self.is_logging_active:
+                return
             self.frame_count += 1
             phase = "boot" if self.frame_count == 1 else "loop"
             trace_data["phase"] = trace_data.get("phase", phase)
+            if "session_type" not in trace_data and self.current_session_type:
+                trace_data["session_type"] = self.current_session_type
             self.buffer.append(trace_data)
 
             # Flush periodically to keep memory minimal
@@ -80,8 +108,8 @@ class WaterfallLogger:
         try:
             os.makedirs(os.path.dirname(os.path.abspath(self.log_path)), exist_ok=True)
             file_exists = os.path.exists(self.log_path)
-            with open(self.log_path, "a", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=self.fieldnames)
+            with open(self.log_path, "a", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=self.fieldnames, extrasaction="ignore")
                 if not file_exists:
                     writer.writeheader()
                 for row in self.buffer:
