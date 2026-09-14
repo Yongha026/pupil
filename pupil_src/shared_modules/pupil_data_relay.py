@@ -55,61 +55,108 @@ class Pupil_Data_Relay(System_Plugin_Base):
 
             # Log complete, 100% physically measured waterfall trace for this frame
             if timing:
-                render_ms = float(getattr(self.g_pool, "last_render_ms", 0.0))
-                buffer_swap_ms = float(getattr(self.g_pool, "last_buffer_swap_ms", 0.0))
-
-                ingest_ms = float(timing.get("ingest_ms", 0.0))
-                roi_ms = float(timing.get("roi_ms", 0.0))
-                preprocess_ms = float(timing.get("preprocess_ms", 0.0))
-                inference_ms = float(timing.get("inference_ms", 0.0))
-                ellipse_fit_ms = float(timing.get("ellipse_fit_ms", 0.0))
-                filter_ms = float(timing.get("filter_ms", 0.0))
-                pye3d_ms = float(timing.get("pye3d_ms", 0.0))
-
-                total_system_latency_ms = (
-                    ingest_ms
-                    + roi_ms
-                    + preprocess_ms
-                    + inference_ms
-                    + ellipse_fit_ms
-                    + filter_ms
-                    + pye3d_ms
-                    + ipc_transport_ms
-                    + gaze_mapping_ms
-                    + render_ms
-                    + buffer_swap_ms
-                )
-
                 try:
                     try:
                         from waterfall_logger import get_waterfall_logger
                     except ImportError:
                         from shared_modules.waterfall_logger import get_waterfall_logger
                     wf = get_waterfall_logger()
-                    smoothing_method = str(getattr(self.g_pool, "pupil_detector_smoothing_method", "one_euro"))
-                    model = str(timing.get("model", getattr(self.g_pool, "pupil_detector_model", "pmrnet")))
-                    model_smooth = model+"_"+smoothing_method
-                    wf.log_frame_trace({
-                        "frame_id": timing.get("frame_id", 0),
-                        "process": timing.get("process", "eye0"),
-                        "model": model_smooth,
-                        "ingest_ms": ingest_ms,
-                        "roi_ms": roi_ms,
-                        "preprocess_ms": preprocess_ms,
-                        "inference_ms": inference_ms,
-                        "ellipse_fit_ms": ellipse_fit_ms,
-                        "filter_ms": filter_ms,
-                        "pye3d_ms": pye3d_ms,
-                        "ipc_transport_ms": ipc_transport_ms,
-                        "gaze_mapping_ms": gaze_mapping_ms,
-                        "render_ms": render_ms,
-                        "buffer_swap_ms": buffer_swap_ms,
-                        "total_system_latency_ms": total_system_latency_ms,
-                        "t_start": timing.get("t_detect_start", t_ipc_recv),
-                        "t_end": time.perf_counter(),
-                    })
                 except Exception:
-                    pass
+                    wf = None
+
+                if wf is not None and wf.is_logging_active:
+                    render_ms = float(getattr(self.g_pool, "last_render_ms", 0.0))
+                    buffer_swap_ms = float(getattr(self.g_pool, "last_buffer_swap_ms", 0.0))
+
+                    ingest_ms = float(timing.get("ingest_ms", 0.0))
+                    roi_ms = float(timing.get("roi_ms", 0.0))
+                    preprocess_ms = float(timing.get("preprocess_ms", 0.0))
+                    inference_ms = float(timing.get("inference_ms", 0.0))
+                    ellipse_fit_ms = float(timing.get("ellipse_fit_ms", 0.0))
+                    filter_ms = float(timing.get("filter_ms", 0.0))
+                    pye3d_ms = float(timing.get("pye3d_ms", 0.0))
+
+                    total_system_latency_ms = (
+                        ingest_ms
+                        + roi_ms
+                        + preprocess_ms
+                        + inference_ms
+                        + ellipse_fit_ms
+                        + filter_ms
+                        + pye3d_ms
+                        + ipc_transport_ms
+                        + gaze_mapping_ms
+                        + render_ms
+                        + buffer_swap_ms
+                    )
+
+                    try:
+                        smoothing_method = str(getattr(self.g_pool, "pupil_detector_smoothing_method", "one_euro"))
+                        model = str(timing.get("model", getattr(self.g_pool, "pupil_detector_model", "pmrnet")))
+                        model_smooth = model+"_"+smoothing_method
+                        wf.log_frame_trace({
+                            "frame_id": timing.get("frame_id", 0),
+                            "process": timing.get("process", "eye0"),
+                            "model": model_smooth,
+                            "session_type": wf.current_session_type,
+                            "ingest_ms": ingest_ms,
+                            "roi_ms": roi_ms,
+                            "preprocess_ms": preprocess_ms,
+                            "inference_ms": inference_ms,
+                            "ellipse_fit_ms": ellipse_fit_ms,
+                            "filter_ms": filter_ms,
+                            "pye3d_ms": pye3d_ms,
+                            "ipc_transport_ms": ipc_transport_ms,
+                            "gaze_mapping_ms": gaze_mapping_ms,
+                            "render_ms": render_ms,
+                            "buffer_swap_ms": buffer_swap_ms,
+                            "total_system_latency_ms": total_system_latency_ms,
+                            "t_start": timing.get("t_detect_start", t_ipc_recv),
+                            "t_end": time.perf_counter(),
+                        })
+                    except Exception:
+                        pass
 
         events["pupil"] = recent_pupil_data
         events["gaze"] = recent_gaze_data
+
+    def on_notify(self, notification):
+        subject = notification.get("subject", "")
+        if subject in ("calibration.started", "validation.started"):
+            session_type = "calibration" if subject.startswith("calibration") else "validation"
+            try:
+                try:
+                    from waterfall_logger import get_waterfall_logger
+                except ImportError:
+                    from shared_modules.waterfall_logger import get_waterfall_logger
+                get_waterfall_logger().start_session(session_type=session_type)
+            except Exception:
+                pass
+        elif subject in (
+            "calibration.stopped",
+            "calibration.successful",
+            "calibration.failed",
+            "validation.stopped",
+            "validation.successful",
+            "validation.failed",
+            "validation.data",
+        ):
+            try:
+                try:
+                    from waterfall_logger import get_waterfall_logger
+                except ImportError:
+                    from shared_modules.waterfall_logger import get_waterfall_logger
+                get_waterfall_logger().stop_session()
+            except Exception:
+                pass
+
+    def cleanup(self):
+        try:
+            try:
+                from waterfall_logger import get_waterfall_logger
+            except ImportError:
+                from shared_modules.waterfall_logger import get_waterfall_logger
+            get_waterfall_logger().stop_session()
+        except Exception:
+            pass
+        super().cleanup()
