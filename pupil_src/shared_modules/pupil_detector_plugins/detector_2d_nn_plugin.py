@@ -558,9 +558,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
 
         if self.active_model == "2dcpp":
-            datum = self._detect_2dcpp(frame, **kwargs)
+            datum = self._detect_2dcpp(frame, now_ts=now_ts, **kwargs)
         else:
-            datum = self._detect_nn(frame, **kwargs)
+            datum = self._detect_nn(frame, now_ts=now_ts, **kwargs)
 
         raw_conf = float(datum.get("raw_confidence", datum.get("confidence", 0.0)))
         if self.conf_graph is not None:
@@ -568,7 +568,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         return datum
 
-    def _detect_2dcpp(self, frame, **kwargs) -> Dict:
+    def _detect_2dcpp(self, frame, now_ts=None, **kwargs) -> Dict:
         t_detect_start = time.perf_counter()
 
         # ROI extraction timing (only measured for 2dcpp)
@@ -678,7 +678,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         datum["ellipse"] = result_ellipse
 
         # Capture ingestion latency from monotonic clock
-        now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+        if now_ts is None:
+            now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
         capture_ts = getattr(frame, "timestamp", now_ts)
         ingest_ms = max(0.05, (now_ts - capture_ts) * 1000.0) if capture_ts > 0 else 1.0
 
@@ -699,7 +700,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         return datum
 
-    def _detect_nn(self, frame, **kwargs) -> Dict:
+    def _detect_nn(self, frame, now_ts=None, **kwargs) -> Dict:
         t_detect_start = time.perf_counter()
 
         if self.model is None:
@@ -857,7 +858,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         infer_ms = (t_infer_end - t_infer_start) * 1000.0
 
         # Estimate capture ingestion latency from monotonic clock
-        # now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+        if now_ts is None:
+            now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
         capture_ts = getattr(frame, "timestamp", now_ts)
         ingest_ms = max(0.05, (now_ts - capture_ts) * 1000.0) if capture_ts > 0 else 1.0
 
