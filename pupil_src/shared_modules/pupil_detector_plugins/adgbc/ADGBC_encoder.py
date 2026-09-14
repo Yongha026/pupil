@@ -354,7 +354,23 @@ class GBC_S_EncDec(nn.Module):
         self.gbc = GranularBall(in_ch=embed_dims[2], num_balls=gbc_num_balls, proj_dim=proj_dim_actual,
                                 use_diag_cov=use_diag_cov, use_residual=True, tau=tau)
 
-    def forward(self, x):
+    def forward(self, x, return_details=False):
+        """
+        Args:
+            x: Input tensor [B, C_in, H, W]
+            return_details: If True, return extra intermediates for t-SNE
+                            visualization of GBC anisotropic balls.
+
+        Returns:
+            If return_details is False (default):
+                (out, enc_feature, dec_feature)
+            If return_details is True:
+                (out, t3, t3_gbc, att_t3, dec_feature)
+                  - t3:      Pre-GBC encoder feature  [B, 64, 48, 48]
+                  - t3_gbc:  Post-GBC encoder feature [B, 64, 48, 48]
+                  - att_t3:  Soft membership weights   [B, H*W, K]
+                  - dec_feature: Decoder feature       [B, 64, 48, 48]
+        """
         B = x.shape[0]
 
         ### Conv Stage
@@ -415,5 +431,7 @@ class GBC_S_EncDec(nn.Module):
 
         out = self.final(out)
 
+        if return_details:
+            return out, t3, t3_gbc, att_t3, dec_feature
 
         return out, enc_feature, dec_feature
