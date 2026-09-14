@@ -108,8 +108,8 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         # Image
         img_path = self.image_paths[idx]
-        if img_path.endswith("_0000.png"):
-            img_path = img_path.replace("_0000", "")
+        # if img_path.endswith("_0000.png"):
+        #     img_path = img_path.replace("_0000", "")
         img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         img_resized = cv2.resize(img, (192, 192), interpolation=cv2.INTER_AREA)
         img_gamma = cv2.LUT(
