@@ -86,8 +86,7 @@ except Exception as e:
 
 model.eval().to(device_str)
 
-# ─── CLAHE ───────────────────────────────────────────────────────────────────
-clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
+
 
 
 # ─── dataset ─────────────────────────────────────────────────────────────────
@@ -301,6 +300,24 @@ if __name__ == "__main__":
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
     args = parser.parse_args()
 
+    # ── dataset validation ────────────────────────────────────────────────
+    # IMG_PATH must contain exactly one of "OpenEDS2019" or "jw_"
+    EDS_match = "OpenEDS2019" in args.IMG_PATH
+    Pupil_match = "jw_" in args.IMG_PATH
+
+    if EDS_match and Pupil_match:
+        parser.error(
+            "IMG_PATH contains both 'OpenEDS2019' and 'jw_'. "
+            "Please specify a path belonging to only one dataset."
+        )
+    if not EDS_match and not Pupil_match:
+        parser.error(
+            "IMG_PATH must contain either 'OpenEDS2019' or 'jw_' "
+            "to identify the dataset."
+        )
+
+    dataset_prefix = "OpenEDS2019" if EDS_match else "PupilLabs"
+
     # If --all_classes is set, override pupil_only
     if args.all_classes:
         args.pupil_only = False
@@ -316,7 +333,7 @@ if __name__ == "__main__":
         rand_images = random.sample(full_images, args.datas)
     except ValueError:
         rand_images = full_images
-    print(f"[INFO] Using {len(rand_images)} images from {args.IMG_PATH}")
+    print(f"[INFO] Dataset: {dataset_prefix} — Using {len(rand_images)} images from {args.IMG_PATH}")
 
     dataset = ImageDataset(rand_images)
     dataloader = DataLoader(
@@ -330,7 +347,6 @@ if __name__ == "__main__":
     # Accumulators — one per class, for pre- and post-GBC features
     pre_feats_by_class = {c: [] for c in range(NUM_CLASSES)}
     post_feats_by_class = {c: [] for c in range(NUM_CLASSES)}
-    att_accum = []  # membership weights aligned with selected pixels
 
     # For post-GBC weighted centroids
     post_weighted_sum = torch.zeros(K, model.gbc.proj_dim, device="cpu")
@@ -367,14 +383,12 @@ if __name__ == "__main__":
                     c_mask = labels_pixels == c
                     c_pre = pre_pixels[c_mask]
                     c_post = post_pixels[c_mask]
-                    c_att = att_flat[c_mask].numpy()
                     if len(c_pre) > 0:
                         pre_feats_by_class[c].append(c_pre)
                         post_feats_by_class[c].append(c_post)
-                        att_accum.append(c_att)
 
     # ── balance & merge ───────────────────────────────────────────────────
-    selected_pre, selected_post, selected_labels, selected_att = [], [], [], []
+    selected_pre, selected_post, selected_labels = [], [], []
 
     for c in range(NUM_CLASSES):
         c_pre_all = np.vstack(pre_feats_by_class[c])
@@ -492,7 +506,7 @@ if __name__ == "__main__":
     )
 
     fig.suptitle(
-        f"GBC Anisotropic Ball Visualisation  •  K={K} balls  •  "
+        f"[{dataset_prefix}] GBC Anisotropic Ball Visualisation  •  K={K} balls  •  "
         f"perplexity={args.perplexity}  •  {len(rand_images)} images",
         fontsize=13,
         fontweight="bold",
@@ -508,7 +522,7 @@ if __name__ == "__main__":
     else:
         save_path = os.path.join(
             results_dir,
-            f"gbc_anisotropic_balls_tsne_{suffix}.png",
+            f"{dataset_prefix}_GBC_anisotropic_balls_tsne_{suffix}.png",
         )
 
     plt.savefig(save_path, dpi=300, bbox_inches="tight")
