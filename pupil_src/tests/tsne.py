@@ -88,9 +88,10 @@ class ImageDataset(Dataset):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Visualizes encoder features before GBC computing")
     parser.add_argument("IMG_PATH", type=str, help="Path to image folder")
-    parser.add_argument("--datas", default=16, type=int, help="Number of images to use")
+    parser.add_argument("--datas", default=1024, type=int, help="Number of images to use")
+    parser.add_argument("--pupil_only", action='store_true', default=False, help="Visualize Pupil and else only")
     args = parser.parse_args()
 
     image_path = os.path.join(args.IMG_PATH, "*.png")
@@ -102,9 +103,9 @@ if __name__ == '__main__':
 
     dataset = ImageDataset(rand_images)
 
-    dataloader = DataLoader(dataset, batch_size=1, num_workers=4, pin_memory=True)
+    dataloader = DataLoader(dataset, batch_size=16, num_workers=4, pin_memory=True)
 
-    SAMPLES_PER_CLASS = 16  # 클래스가 4개면 총 8,000개의 포인트로 t-SNE 수행
+    SAMPLES_PER_CLASS = 2000  # 클래스가 4개면 총 8,000개의 포인트로 t-SNE 수행
     NUM_CLASSES = 4
 
     features_by_class = {c: [] for c in range(NUM_CLASSES)}
@@ -150,31 +151,45 @@ if __name__ == '__main__':
 
     # custom cmap from tab10
     tab10_cmap = plt.cm.get_cmap('tab10')
-    four_colours_cmap = ListedColormap(tab10_cmap.colors[0:4])
+    if args.pupil_only:
+        # Class 3(Pupil)은 1로, 나머지(0, 1, 2)는 0(Else)으로 이진 매핑
+        y_plot = np.where(y == 3, 1, 0)
+
+        # 2개 범주용 컬러맵 생성 (tab10의 첫 2개 색상 사용)
+        plot_cmap = ListedColormap(tab10_cmap.colors[:2])
+
+        ticks = [0, 1]
+        tick_labels = ['Else', 'Pupil']
+        save_filename = "OpenEDS2019_Enc_pixel_features_tsne_pupil_only.png"
+    else:
+        # 기존 4개 클래스 유지
+        y_plot = y
+        plot_cmap = ListedColormap(tab10_cmap.colors[:4])
+
+        ticks = [0, 1, 2, 3]
+        tick_labels = ['Background', 'Sclera', 'Iris', 'Pupil']
+        save_filename = "PupilLabs_Enc_pixel_features_tsne.png"
 
     # 시각화
     plt.figure(figsize=(10, 8))
 
-    # 클래스가 0, 1, 2, 3 이므로 vmin, vmax를 명시하여 색상을 4개 구간으로 깔끔하게 매핑
+
     scatter = plt.scatter(
         X_embedded[:, 0],
         X_embedded[:, 1],
-        c=y,
-        cmap=four_colours_cmap,
+        c=y_plot,
+        cmap=plot_cmap,
         # vmin=-0.5,
         # vmax=9.5,  # tab10 컬러맵의 전체 인덱스 범위 지정
         alpha=0.5,
         s=5
     )
 
-    # 1. ticks에는 숫자를 전달
-    cbar = plt.colorbar(scatter, ticks=[0, 1, 2, 3])
-
-    # 2. 텍스트 라벨은 set_yticklabels로 별도 지정
-    cbar.ax.set_yticklabels(['Background', 'Sclera', 'Iris', 'Pupil'])
+    cbar = plt.colorbar(scatter, ticks=ticks)
+    cbar.ax.set_yticklabels(tick_labels)
     cbar.set_label('Class ID')
 
     plt.title("Pixel-wise Deep Feature Clustering (t-SNE)")
 
-    plt.savefig("PupilLabs_Enc_pixel_features_tsne.png", dpi=300)
+    plt.savefig(save_filename, dpi=300)
     plt.close()
