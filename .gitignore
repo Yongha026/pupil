@@ -63,3 +63,5 @@ A
 *.pth
 latency_example.png
 ./logged_latencies/
+*.onnx
+*.engine
