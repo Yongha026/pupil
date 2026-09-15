@@ -426,15 +426,16 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             elif model_name == "adgbc_trt":
                 from pupil_detector_plugins.trt_detector_wrapper import TRTDetectorModule
 
-                candidates = [
-                    os.path.join(self.ckpt_dir, "adgbc_nn_best.engine"),
-                    os.path.join(self.ckpt_dir, "adgbc.engine"),
-                    os.path.join(self.ckpt_dir, "nnunet_gbc_backbone.engine"),
-                    os.path.join(self.plugin_dir, "adgbc_nn_best.engine"),
-                ]
-                engine_path = next(
-                    (p for p in candidates if os.path.exists(p)), candidates[0]
-                )
+                # candidates = [
+                #     os.path.join(self.ckpt_dir, "adgbc_nn_best.engine"),
+                #     os.path.join(self.ckpt_dir, "adgbc.engine"),
+                #     os.path.join(self.ckpt_dir, "nnunet_gbc_backbone.engine"),
+                #     os.path.join(self.plugin_dir, "adgbc_nn_best.engine"),
+                # ]
+                # engine_path = next(
+                #     (p for p in candidates if os.path.exists(p)), candidates[0]
+                # )
+                engine_path = os.path.join(self.ckpt_dir, "adgbc_nn_best.engine")
                 model = TRTDetectorModule(engine_path=engine_path, device=self.device)
 
             else:
