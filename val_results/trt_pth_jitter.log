@@ -1,95 +1,91 @@
-(pupil_nnunets) byeongjun@server3:~/PycharmProjects/pupil_nnunets$ python val_results/analyze_raw_noise.py val_results/raw_data/validation_adgbc_trt_2026-09-15_15-48-41/
-
 ============================================================
-  Run: validation_adgbc_trt_2026-09-15_15-48-41
+  Run: validation_adgbc_trt_2026-09-15_18-53-51
 ============================================================
 
 ===  Export Info  ===
   session_type            : validation
   model                   : adgbc_trt
   gazer_class             : Gazer2D
-  timestamp               : 2026-09-15_15-48-41
-  accuracy_deg            : 1.09878
-  precision_deg           : 0.06183
+  timestamp               : 2026-09-15_18-53-51
+  accuracy_deg            : 1.87628
+  precision_deg           : 0.07327
   outlier_threshold_deg   : 2.5
-  pupil_count             : 4056
+  pupil_count             : 4260
   ref_count               : 120
-  gaze_count              : 2028
+  gaze_count              : 2130
 
 ===  Pupil Pixel Jitter  ===
   No pixel_jitter data found (was detector_2d_nn_plugin.py patched?)
 
 ===  Gaze Angular Error  ===
-  Matched samples          : 1,090
-  Mean angular error       : 75.557 deg
-  Median (p50)             : 86.367 deg
-  p75                      : 93.202 deg
-  p95                      : 104.217 deg
-  p99                      : 104.342 deg
-  Max                      : 104.347 deg
+  Matched samples          : 1,083
+  Mean angular error       : 23.973 deg
+  Median (p50)             : 4.195 deg
+  p75                      : 12.674 deg
+  p95                      : 95.055 deg
+  p99                      : 96.088 deg
+  Max                      : 108.691 deg
 
   Error distribution:
-    < 1 deg     :    89  (  8.2%)  ####
-    1-2 deg     :    56  (  5.1%)  ##
-    2-5 deg     :    31  (  2.8%)  #
-    5-10 deg    :     0  (  0.0%)  
-    >= 10 deg   :   914  ( 83.9%)  #########################################
+    < 1 deg     :     1  (  0.1%)
+    1-2 deg     :   142  ( 13.1%)  ######
+    2-5 deg     :   421  ( 38.9%)  ###################
+    5-10 deg    :     0  (  0.0%)
+    >= 10 deg   :   519  ( 47.9%)  #######################
 
 ===  Outlier Analysis  ===
-  Outliers (>5 deg)        : 914 / 1,090  (83.9%)
-  Outliers (>10 deg)       : 914 / 1,090  (83.9%)
+  Outliers (>5 deg)        : 519 / 1,083  (47.9%)
+  Outliers (>10 deg)       : 519 / 1,083  (47.9%)
 
-  Confidence - outlier samples : mean = 0.000,  min = 0.000
-  Confidence - normal samples  : mean = 0.854
+  Confidence - outlier samples : mean = 0.388,  min = 0.000
+  Confidence - normal samples  : mean = 0.803
 
 ============================================================
   Analysis complete.
-  Run directory: val_results/raw_data/validation_adgbc_trt_2026-09-15_15-48-41
+  Run directory: /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/raw_data/validation_adgbc_trt_2026-09-15_18-53-51
 ============================================================
 
-(pupil_nnunets) byeongjun@server3:~/PycharmProjects/pupil_nnunets$ python val_results/analyze_raw_noise.py val_results/raw_data/validation_adgbc_2026-09-15_15-49-28/
-
 ============================================================
-  Run: validation_adgbc_2026-09-15_15-49-28
+  Run: validation_adgbc_2026-09-15_18-55-25
 ============================================================
 
 ===  Export Info  ===
   session_type            : validation
   model                   : adgbc
   gazer_class             : Gazer2D
-  timestamp               : 2026-09-15_15-49-28
-  accuracy_deg            : 0.41212
-  precision_deg           : 0.10092
+  timestamp               : 2026-09-15_18-55-25
+  accuracy_deg            : 0.58551
+  precision_deg           : 0.04326
   outlier_threshold_deg   : 2.5
-  pupil_count             : 2484
+  pupil_count             : 2294
   ref_count               : 120
-  gaze_count              : 1242
+  gaze_count              : 1144
 
 ===  Pupil Pixel Jitter  ===
   No pixel_jitter data found (was detector_2d_nn_plugin.py patched?)
 
 ===  Gaze Angular Error  ===
-  Matched samples          : 627
-  Mean angular error       : 0.345 deg
-  Median (p50)             : 0.274 deg
-  p75                      : 0.436 deg
-  p95                      : 0.783 deg
-  p99                      : 0.990 deg
-  Max                      : 1.230 deg
+  Matched samples          : 594
+  Mean angular error       : 0.520 deg
+  Median (p50)             : 0.407 deg
+  p75                      : 0.726 deg
+  p95                      : 1.045 deg
+  p99                      : 1.080 deg
+  Max                      : 1.105 deg
 
   Error distribution:
-    < 1 deg     :   621  ( 99.0%)  #################################################
-    1-2 deg     :     6  (  1.0%)  
-    2-5 deg     :     0  (  0.0%)  
-    5-10 deg    :     0  (  0.0%)  
-    >= 10 deg   :     0  (  0.0%)  
+    < 1 deg     :   540  ( 90.9%)  #############################################
+    1-2 deg     :    54  (  9.1%)  ####
+    2-5 deg     :     0  (  0.0%)
+    5-10 deg    :     0  (  0.0%)
+    >= 10 deg   :     0  (  0.0%)
 
 ===  Outlier Analysis  ===
-  Outliers (>5 deg)        : 0 / 627  (0.0%)
-  Outliers (>10 deg)       : 0 / 627  (0.0%)
-  Confidence - normal samples  : mean = 0.984
+  Outliers (>5 deg)        : 0 / 594  (0.0%)
+  Outliers (>10 deg)       : 0 / 594  (0.0%)
+  Confidence - normal samples  : mean = 0.987
 
 ============================================================
   Analysis complete.
-  Run directory: val_results/raw_data/validation_adgbc_2026-09-15_15-49-28
+  Run directory: val_results/raw_data/validation_adgbc_2026-09-15_18-55-25
 ============================================================

@@ -21,3 +21,23 @@ PROCESSING COMPUTE LATENCY                               3.08            3.14   
 TOTAL SYSTEM LATENCY                                    36.35           59.95           59.58           76.14
 ====================================================================================================================
 
+========================================================================================
+                   STEADY-STATE LOOP LATENCY MODEL COMPARISON SUMMARY
+========================================================================================
+Stage Name                Category            adgbc_one_euro (ms)adgbc_trt_one_euro (ms)
+----------------------------------------------------------------------------------------
+Camera Ingest             Capture Latency                15.26           12.53
+Pupil Preprocessing       Processing Latency              0.52            0.37
+Neural Net Inference      Processing Latency             11.25            0.64
+Contour & Ellipse Fit     Processing Latency              0.70            0.33
+Temporal Filtering        Processing Latency              0.01            0.01
+3D Eye Model              Processing Latency              0.66            0.79
+ZeroMQ IPC Transport      Transport Latency              16.87           16.68
+World Gaze Mapping        Transport Latency               0.10            0.10
+Render Submission         Display Latency                 1.25            1.20
+Display Buffer Swap       Display Latency                 0.33            0.05
+----------------------------------------------------------------------------------------
+PROCESSING COMPUTE LATENCY                              13.14            2.14
+========================================================================================
+TOTAL SYSTEM LATENCY                                    46.94           32.71
+========================================================================================
