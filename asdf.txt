@@ -1,0 +1,14 @@
+python -c "
+import torch, hashlib
+p1 = 'pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth'
+p2 ='/mnt/hdd1/nnunetv2_openEDS/nnUNet_results/Dataset250_OpenEDS2019/nnUNetTrainerGBC__nnUNetPlans__2d/fold_0/checkpoint_best.pth'
+w1 = torch.load(p1, map_location='cpu')
+w2 = torch.load(p2, map_location='cpu')
+d1 = w1.get('network_weights', w1)
+d2 = w2.get('network_weights', w2)
+print('P1 keys:', len(d1), 'P2 keys:', len(d2))
+diffs = [k for k in d1 if k not in d2 or not torch.equal(d1[k], d2[k])]
+print(f'Mismatched weight tensors: {len(diffs)} / {len(d1)}')
+if diffs:
+    print('First 5 mismatched keys:', diffs[:5])
+"
