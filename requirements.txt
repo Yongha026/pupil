@@ -9,8 +9,10 @@ click
 glfw>=2.0.0
 msgpack>=1.0.0
 numexpr
-numpy>=1.20.0
-opencv-python
+# numpy>=1.20.0
+numpy == 1.26.4
+# opencv-python
+opencv-python = 4.10.0.84
 packaging==26.3
 psutil
 pyopengl
