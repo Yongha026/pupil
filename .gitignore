@@ -27,6 +27,9 @@ settings/
 *.db
 *.npy
 
+*.log
+
+
 # IDE generated files #
 .floo
 .flooignore
@@ -60,8 +63,8 @@ A
 *.exe
 
 # AD-GBC ckpts
+pupil_src/shared_modules/pupil_detector_plugins/adgbc_nn_best.pth
 *.pth
+!./model_result_images
 latency_example.png
-./logged_latencies/
-*.onnx
-*.engine
+./logged_latencies/*.png

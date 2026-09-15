@@ -51,6 +51,7 @@ AVAILABLE_MODELS: List[Tuple[str, str]] = [
     ("ukan", "U-KAN"),
     ("adgbc", "AD-GBC"),
     ("adgbc_400", "AD-GBC_400"),
+    ("adgbc_trt", "AD-GBC (TensorRT)"),
     ("2dcpp", "Classic C++ (2D)"),
 ]
 
@@ -68,10 +69,10 @@ class OneEuroFilter:
     """
 
     def __init__(
-            self,
-            min_cutoff: float = 1.0,
-            beta: float = 0.05,
-            d_cutoff: float = 1.0,
+        self,
+        min_cutoff: float = 1.0,
+        beta: float = 0.05,
+        d_cutoff: float = 1.0,
     ):
         self.min_cutoff = float(min_cutoff)
         self.beta = float(beta)
@@ -141,10 +142,10 @@ class EllipseOneEuroFilter:
     """
 
     def __init__(
-            self,
-            min_cutoff: float = 1.0,
-            beta: float = 0.05,
-            d_cutoff: float = 1.0,
+        self,
+        min_cutoff: float = 1.0,
+        beta: float = 0.05,
+        d_cutoff: float = 1.0,
     ):
         self.f_cx = OneEuroFilter(min_cutoff=min_cutoff, beta=beta, d_cutoff=d_cutoff)
         self.f_cy = OneEuroFilter(min_cutoff=min_cutoff, beta=beta, d_cutoff=d_cutoff)
@@ -153,13 +154,13 @@ class EllipseOneEuroFilter:
         self.f_angle = OneEuroFilter(min_cutoff=min_cutoff, beta=beta, d_cutoff=d_cutoff)
 
     def filter(
-            self,
-            cx: float,
-            cy: float,
-            minor_d: float,
-            major_d: float,
-            angle_deg: float,
-            timestamp: Optional[float] = None,
+        self,
+        cx: float,
+        cy: float,
+        minor_d: float,
+        major_d: float,
+        angle_deg: float,
+        timestamp: Optional[float] = None,
     ) -> Tuple[float, float, float, float, float]:
         cx_hat = self.f_cx.filter(cx, timestamp)
         cy_hat = self.f_cy.filter(cy, timestamp)
@@ -216,18 +217,18 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         return self.__detector_2d
 
     def __init__(
-            self,
-            g_pool=None,
-            active_model: str = "adgbc",
-            confidence_threshold: float = 0.6,
-            show_confidence_graph: bool = True,
-            enable_smoothing: bool = True,
-            smoothing_method: str = "one_euro",
-            smooth_alpha: float = 0.4,
-            one_euro_min_cutoff: float = 1.0,
-            one_euro_beta: float = 0.05,
-            properties: Optional[dict] = None,
-            **kwargs,
+        self,
+        g_pool=None,
+        active_model: str = "adgbc",
+        confidence_threshold: float = 0.6,
+        show_confidence_graph: bool = True,
+        enable_smoothing: bool = True,
+        smoothing_method: str = "one_euro",
+        smooth_alpha: float = 0.4,
+        one_euro_min_cutoff: float = 1.0,
+        one_euro_beta: float = 0.05,
+        properties: Optional[dict] = None,
+        **kwargs,
     ):
         super().__init__(g_pool=g_pool)
         self.__detector_2d = Detector2D(properties or {})
@@ -250,8 +251,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         # Resolve smoothing method (One-Euro filter is default / initial)
         if "enable_smoothing" in kwargs and not kwargs["enable_smoothing"]:
             smoothing_method = "none"
-        elif not enable_smoothing:
-        # if not self.enable_smoothing:
+        elif not self.enable_smoothing:
             smoothing_method = "none"
         if hasattr(self.g_pool, "pupil_detector_smoothing_method") and self.g_pool.pupil_detector_smoothing_method:
             smoothing_method = str(self.g_pool.pupil_detector_smoothing_method)
@@ -271,7 +271,6 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self.one_euro_beta = float(one_euro_beta)
 
         self._prev_ellipse = None
-        self._last_raw_center: Optional[Tuple[float, float]] = None
         self._consecutive_jumps = 0
         self._one_euro_filter = EllipseOneEuroFilter(
             min_cutoff=self.one_euro_min_cutoff,
@@ -312,9 +311,9 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         for plugin in plugin_list:
             if (
-                    isinstance(plugin, PupilDetectorPlugin)
-                    and plugin is not self
-                    and getattr(plugin, "pupil_detection_identifier", "") == "2d"
+                isinstance(plugin, PupilDetectorPlugin)
+                and plugin is not self
+                and getattr(plugin, "pupil_detection_identifier", "") == "2d"
             ):
                 plugin.alive = False
 
@@ -424,6 +423,21 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 ).to(self.device)
                 self._load_state_dict(model, ckpt_path, "AD-GBC_400")
 
+            elif model_name == "adgbc_trt":
+                from pupil_detector_plugins.trt_detector_wrapper import TRTDetectorModule
+
+                # candidates = [
+                #     os.path.join(self.ckpt_dir, "adgbc_nn_best.engine"),
+                #     os.path.join(self.ckpt_dir, "adgbc.engine"),
+                #     os.path.join(self.ckpt_dir, "nnunet_gbc_backbone.engine"),
+                #     os.path.join(self.plugin_dir, "adgbc_nn_best.engine"),
+                # ]
+                # engine_path = next(
+                #     (p for p in candidates if os.path.exists(p)), candidates[0]
+                # )
+                engine_path = os.path.join(self.ckpt_dir, "adgbc_nn_best.engine")
+                model = TRTDetectorModule(engine_path=engine_path, device=self.device)
+
             else:
                 logger.warning(f"Unknown neural network model requested: {model_name}")
 
@@ -519,7 +533,6 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self._unload_current_model()
         self.active_model = model_name
         self._prev_ellipse = None
-        self._last_raw_center = None
         self._consecutive_jumps = 0
         if hasattr(self, "_one_euro_filter"):
             self._one_euro_filter.reset()
@@ -558,10 +571,12 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
     # Detection Loop
     # -------------------------------------------------------------------------
     def detect(self, frame, **kwargs) -> Dict:
+        now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+
         if self.active_model == "2dcpp":
-            datum = self._detect_2dcpp(frame, **kwargs)
+            datum = self._detect_2dcpp(frame, now_ts=now_ts, **kwargs)
         else:
-            datum = self._detect_nn(frame, **kwargs)
+            datum = self._detect_nn(frame, now_ts=now_ts, **kwargs)
 
         raw_conf = float(datum.get("raw_confidence", datum.get("confidence", 0.0)))
         if self.conf_graph is not None:
@@ -569,7 +584,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         return datum
 
-    def _detect_2dcpp(self, frame, **kwargs) -> Dict:
+    def _detect_2dcpp(self, frame, now_ts=None, **kwargs) -> Dict:
         t_detect_start = time.perf_counter()
 
         # ROI extraction timing (only measured for 2dcpp)
@@ -600,25 +615,87 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         else:
             confidence = raw_conf
 
+        # Temporal Smoothing
+        t_filter_start = time.perf_counter()
+        ellipse_dict = result.get("ellipse")
+        if ellipse_dict and ellipse_dict.get("center") and ellipse_dict.get("axes"):
+            cx, cy = ellipse_dict["center"]
+            minor_d, major_d = ellipse_dict["axes"]
+            angle_deg = ellipse_dict["angle"]
+
+            if self._smoothing_method == "one_euro":
+                cx, cy, minor_d, major_d, angle_deg = self._one_euro_filter.filter(
+                    float(cx), float(cy), float(minor_d), float(major_d), float(angle_deg), frame.timestamp
+                )
+                self._prev_ellipse = ((cx, cy), (minor_d, major_d), angle_deg)
+                self._consecutive_jumps = 0
+            elif self._smoothing_method == "ema":
+                if self._prev_ellipse is not None:
+                    p_c, p_ax, p_ang = self._prev_ellipse
+                    dist = np.sqrt((cx - p_c[0]) ** 2 + (cy - p_c[1]) ** 2)
+                    if dist > 40.0:
+                        self._consecutive_jumps += 1
+                        if self._consecutive_jumps < 5:
+                            raw_conf = 0.0
+                            cx, cy = p_c
+                            minor_d, major_d = p_ax
+                            angle_deg = p_ang
+                        else:
+                            self._consecutive_jumps = 0
+                    else:
+                        self._consecutive_jumps = 0
+
+                    a = self.smooth_alpha
+                    cx = a * cx + (1.0 - a) * p_c[0]
+                    cy = a * cy + (1.0 - a) * p_c[1]
+                    minor_d = a * minor_d + (1.0 - a) * p_ax[0]
+                    major_d = a * major_d + (1.0 - a) * p_ax[1]
+                    diff_ang = (angle_deg - p_ang + 90.0) % 180.0 - 90.0
+                    angle_deg = (p_ang + a * diff_ang) % 180.0
+                else:
+                    self._consecutive_jumps = 0
+                self._prev_ellipse = ((cx, cy), (minor_d, major_d), angle_deg)
+            else:
+                self._prev_ellipse = None
+                self._consecutive_jumps = 0
+                if hasattr(self, "_one_euro_filter"):
+                    self._one_euro_filter.reset()
+
+            result_location = (float(cx), float(cy))
+            result_diameter = float(major_d)
+            result_ellipse = {
+                "axes": (float(minor_d), float(major_d)),
+                "angle": float(angle_deg),
+                "center": (float(cx), float(cy)),
+            }
+        else:
+            self._prev_ellipse = None
+            self._consecutive_jumps = 0
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
+            result_location = result["location"]
+            result_diameter = result["diameter"]
+            result_ellipse = result["ellipse"]
+
+        t_filter_end = time.perf_counter()
+        filter_ms = (t_filter_end - t_filter_start) * 1000.0 if self._smoothing_method != "none" else 0.0
+
         norm_pos = normalize(
-            result["location"], (frame.width, frame.height), flip_y=True
+            result_location, (frame.width, frame.height), flip_y=True
         )
 
         datum = self.create_pupil_datum(
             norm_pos=norm_pos,
-            diameter=result["diameter"],
+            diameter=result_diameter,
             confidence=confidence,
             timestamp=frame.timestamp,
         )
         datum["raw_confidence"] = raw_conf
-        datum["ellipse"] = {
-            "axes": result["ellipse"]["axes"],
-            "angle": result["ellipse"]["angle"],
-            "center": result["ellipse"]["center"],
-        }
+        datum["ellipse"] = result_ellipse
 
         # Capture ingestion latency from monotonic clock
-        now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+        if now_ts is None:
+            now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
         capture_ts = getattr(frame, "timestamp", now_ts)
         ingest_ms = max(0.05, (now_ts - capture_ts) * 1000.0) if capture_ts > 0 else 1.0
 
@@ -631,14 +708,15 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             "preprocess_ms": 0.0,
             "inference_ms": infer_ms,
             "ellipse_fit_ms": 0.0,
+            "filter_ms": filter_ms,
             "pye3d_ms": 0.0,
             "t_detect_start": t_detect_start,
-            "t_detect_end": t_infer_end,
+            "t_detect_end": t_filter_end,
         }
 
         return datum
 
-    def _detect_nn(self, frame, **kwargs) -> Dict:
+    def _detect_nn(self, frame, now_ts=None, **kwargs) -> Dict:
         t_detect_start = time.perf_counter()
 
         if self.model is None:
@@ -651,7 +729,29 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         gray = self._extract_gray_image(frame)
         if gray is None:
             return self._create_empty_datum(frame.timestamp, raw_confidence=0.0)
-        tensor = self.get_img(gray).unsqueeze(0).to(self.device)
+
+        # Check if the active model requires a specific spatial input shape (e.g. TensorRT engine)
+        target_h = getattr(self.model, "expected_h", None)
+        target_w = getattr(self.model, "expected_w", None)
+
+        orig_h, orig_w = gray.shape[:2]
+        needs_rescale = (
+            target_h is not None
+            and target_w is not None
+            and (orig_h != target_h or orig_w != target_w)
+        )
+
+        if needs_rescale:
+            gray_proc = cv2.resize(
+                gray, (target_w, target_h), interpolation=cv2.INTER_AREA
+            )
+            scale_x = float(orig_w) / float(target_w)
+            scale_y = float(orig_h) / float(target_h)
+        else:
+            gray_proc = gray
+            scale_x, scale_y = 1.0, 1.0
+
+        tensor = self.get_img(gray_proc).unsqueeze(0).to(self.device)
         t_prep_end = time.perf_counter()
 
         # 3. Model inference
@@ -696,19 +796,24 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         if not contours:
             self._prev_ellipse = None
-            self._last_raw_center = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         best_contour = max(contours, key=cv2.contourArea)
+
+        if needs_rescale:
+            best_contour = best_contour.astype(np.float32)
+            best_contour[:, 0, 0] *= scale_x
+            best_contour[:, 0, 1] *= scale_y
+
         hull = cv2.convexHull(best_contour)
         if len(hull) < 5:
             self._prev_ellipse = None
-            self._last_raw_center = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
+
         ellipse = cv2.fitEllipse(hull)
         (cx, cy), (d1, d2), angle_deg = ellipse
 
@@ -728,21 +833,15 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         # 2. Blink & noise rejection filter (reject when eye is almost closed or area is tiny)
         if aspect_ratio < 0.20 or area < 15.0:
             self._prev_ellipse = None
-            self._last_raw_center = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
-        # ------------------------------------------------------------------
-        # Snapshot raw (pre-smoothing) ellipse values for diagnostic logging
-        # ------------------------------------------------------------------
-        raw_cx = float(cx)
-        raw_cy = float(cy)
-        raw_minor = float(minor_d)
-        raw_major = float(major_d)
-        raw_angle = float(angle_deg)
+        t_ellipse_end = time.perf_counter()
+        ellipse_fit_ms = (t_ellipse_end - t_post_start) * 1000.0
 
         # 3. Temporal Smoothing (Strictly divided by self._smoothing_method)
+        t_filter_start = time.perf_counter()
         if self._smoothing_method == "one_euro":
             # --- One-Euro Filter (Speed-adaptive low-pass filter per Casiez et al.) ---
             cx, cy, minor_d, major_d, angle_deg = self._one_euro_filter.filter(
@@ -789,13 +888,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
 
-        # Compute instantaneous pixel jitter from raw (pre-smoothing) center
-        if self._last_raw_center is not None:
-            pixel_jitter = float(np.hypot(raw_cx - self._last_raw_center[0],
-                                          raw_cy - self._last_raw_center[1]))
-        else:
-            pixel_jitter = 0.0
-        self._last_raw_center = (raw_cx, raw_cy)
+        t_filter_end = time.perf_counter()
+        filter_ms = (t_filter_end - t_filter_start) * 1000.0 if self._smoothing_method != "none" else 0.0
 
         if raw_conf < self.confidence_threshold:
             confidence = 0.0
@@ -806,10 +900,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
 
         prep_ms = (t_prep_end - t_prep_start) * 1000.0
         infer_ms = (t_infer_end - t_infer_start) * 1000.0
-        post_ms = (t_post_end - t_post_start) * 1000.0
 
         # Estimate capture ingestion latency from monotonic clock
-        now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
+        if now_ts is None:
+            now_ts = self.g_pool.get_timestamp() if hasattr(self.g_pool, "get_timestamp") else time.time()
         capture_ts = getattr(frame, "timestamp", now_ts)
         ingest_ms = max(0.05, (now_ts - capture_ts) * 1000.0) if capture_ts > 0 else 1.0
 
@@ -838,14 +932,6 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         datum["raw_confidence"] = result["raw_confidence"]
         datum["ellipse"] = result["ellipse"]
 
-        # Raw (pre-smoothing) ellipse for noise diagnostics
-        datum["raw_ellipse"] = {
-            "center": (raw_cx, raw_cy),
-            "axes": (raw_minor, raw_major),
-            "angle": raw_angle,
-        }
-        datum["pixel_jitter"] = pixel_jitter
-
         # Attach sub-stage timings to datum for downstream cross-process tracing
         datum["waterfall_timing"] = {
             "frame_id": getattr(frame, "index", 0),
@@ -855,7 +941,8 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             "roi_ms": 0.0,  # 0.0 for neural network models (no ROI cropping)
             "preprocess_ms": prep_ms,
             "inference_ms": infer_ms,
-            "ellipse_fit_ms": post_ms,
+            "ellipse_fit_ms": ellipse_fit_ms,
+            "filter_ms": filter_ms,
             "pye3d_ms": 0.0,
             "t_detect_start": t_detect_start,
             "t_detect_end": t_post_end,
@@ -933,6 +1020,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 label="Confidence Threshold",
             )
         )
+
 
         self.menu.append(ui.Info_Text("Color Legend"))
         self.menu.append(
