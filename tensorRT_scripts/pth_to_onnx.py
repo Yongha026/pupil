@@ -124,7 +124,7 @@ def export_pth_to_onnx(
     )
 
     # 4. Extract Backbone Network & Ensure Evaluation Mode
-    network = predictor.network
+    network = predictor.network.to(device)
     network.eval()
     print(f"[*] Successfully loaded network architecture: {network.__class__.__name__}")
 

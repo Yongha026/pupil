@@ -36,6 +36,9 @@ python pth_to_onnx.py \
     --output_file nnunet_gbc_backbone.onnx \
     --opset 17 \
     --device cuda:0
+    
+# 1.1 Command for iulab9 CUDA=1
+CUDA_VISIBLE_DEVICES=1 CUDA_LAUNCH_BLOCKING=1 TORCH_USE_CUDA_DSA=1 python tensorRT_scripts/pth_to_onnx.py --model_folder /mnt/hdd1/nnunetv2_openEDS/nnUNet_results/Dataset250_OpenEDS2019/nnUNetTrainerGBC_S_16__nnUNetPlans__2d/ --fold 0 --checkpoint_name checkpoint_final.pth --output_file nn_GBC_S_16.onnx --opset 17 --device cuda:0
 
 # 2. Build TensorRT Engine (FP16, 192x192)
 python onnx_to_engine.py \
