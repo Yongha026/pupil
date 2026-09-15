@@ -1,0 +1,95 @@
+(pupil_nnunets) byeongjun@server3:~/PycharmProjects/pupil_nnunets$ python val_results/analyze_raw_noise.py val_results/raw_data/validation_adgbc_trt_2026-09-15_15-48-41/
+
+============================================================
+  Run: validation_adgbc_trt_2026-09-15_15-48-41
+============================================================
+
+===  Export Info  ===
+  session_type            : validation
+  model                   : adgbc_trt
+  gazer_class             : Gazer2D
+  timestamp               : 2026-09-15_15-48-41
+  accuracy_deg            : 1.09878
+  precision_deg           : 0.06183
+  outlier_threshold_deg   : 2.5
+  pupil_count             : 4056
+  ref_count               : 120
+  gaze_count              : 2028
+
+===  Pupil Pixel Jitter  ===
+  No pixel_jitter data found (was detector_2d_nn_plugin.py patched?)
+
+===  Gaze Angular Error  ===
+  Matched samples          : 1,090
+  Mean angular error       : 75.557 deg
+  Median (p50)             : 86.367 deg
+  p75                      : 93.202 deg
+  p95                      : 104.217 deg
+  p99                      : 104.342 deg
+  Max                      : 104.347 deg
+
+  Error distribution:
+    < 1 deg     :    89  (  8.2%)  ####
+    1-2 deg     :    56  (  5.1%)  ##
+    2-5 deg     :    31  (  2.8%)  #
+    5-10 deg    :     0  (  0.0%)  
+    >= 10 deg   :   914  ( 83.9%)  #########################################
+
+===  Outlier Analysis  ===
+  Outliers (>5 deg)        : 914 / 1,090  (83.9%)
+  Outliers (>10 deg)       : 914 / 1,090  (83.9%)
+
+  Confidence - outlier samples : mean = 0.000,  min = 0.000
+  Confidence - normal samples  : mean = 0.854
+
+============================================================
+  Analysis complete.
+  Run directory: val_results/raw_data/validation_adgbc_trt_2026-09-15_15-48-41
+============================================================
+
+(pupil_nnunets) byeongjun@server3:~/PycharmProjects/pupil_nnunets$ python val_results/analyze_raw_noise.py val_results/raw_data/validation_adgbc_2026-09-15_15-49-28/
+
+============================================================
+  Run: validation_adgbc_2026-09-15_15-49-28
+============================================================
+
+===  Export Info  ===
+  session_type            : validation
+  model                   : adgbc
+  gazer_class             : Gazer2D
+  timestamp               : 2026-09-15_15-49-28
+  accuracy_deg            : 0.41212
+  precision_deg           : 0.10092
+  outlier_threshold_deg   : 2.5
+  pupil_count             : 2484
+  ref_count               : 120
+  gaze_count              : 1242
+
+===  Pupil Pixel Jitter  ===
+  No pixel_jitter data found (was detector_2d_nn_plugin.py patched?)
+
+===  Gaze Angular Error  ===
+  Matched samples          : 627
+  Mean angular error       : 0.345 deg
+  Median (p50)             : 0.274 deg
+  p75                      : 0.436 deg
+  p95                      : 0.783 deg
+  p99                      : 0.990 deg
+  Max                      : 1.230 deg
+
+  Error distribution:
+    < 1 deg     :   621  ( 99.0%)  #################################################
+    1-2 deg     :     6  (  1.0%)  
+    2-5 deg     :     0  (  0.0%)  
+    5-10 deg    :     0  (  0.0%)  
+    >= 10 deg   :     0  (  0.0%)  
+
+===  Outlier Analysis  ===
+  Outliers (>5 deg)        : 0 / 627  (0.0%)
+  Outliers (>10 deg)       : 0 / 627  (0.0%)
+  Confidence - normal samples  : mean = 0.984
+
+============================================================
+  Analysis complete.
+  Run directory: val_results/raw_data/validation_adgbc_2026-09-15_15-49-28
+============================================================

@@ -1,0 +1,12 @@
+date,time,model,gazer_class,accuracy_deg,accuracy_used_samples,accuracy_total_samples,precision_deg,precision_used_samples,precision_total_samples,outlier_threshold_deg,pupil_positions_count,ref_points_count,status
+2026-09-15,15:48:05,adgbc_trt,Gazer2D,1.1205,170,1105,0.0475,208,1104,2.5,4080,120,success
+2026-09-15,15:48:14,adgbc_trt,Gazer2D,1.2365,103,1087,0.0321,266,1086,2.5,4076,120,success
+2026-09-15,15:48:23,adgbc_trt,Gazer2D,1.0159,180,1091,0.069,241,1090,2.5,4244,120,success
+2026-09-15,15:48:32,adgbc_trt,Gazer2D,1.0245,181,1091,0.0552,242,1090,2.5,4098,120,success
+2026-09-15,15:48:41,adgbc_trt,Gazer2D,1.0988,153,1090,0.0618,269,1089,2.5,4056,120,success
+2026-09-15,15:48:49,adgbc,Gazer2D,2.1974,1,156,0.1859,138,155,2.5,740,30,success
+2026-09-15,15:49:18,adgbc,Gazer2D,0.277,627,644,0.103,631,643,2.5,2344,120,success
+2026-09-15,15:49:28,adgbc,Gazer2D,0.4121,627,627,0.1009,620,626,2.5,2484,120,success
+2026-09-15,15:49:37,adgbc,Gazer2D,0.3826,614,620,0.094,606,619,2.5,2326,120,success
+2026-09-15,15:49:46,adgbc,Gazer2D,0.4989,634,634,0.0938,630,633,2.5,2372,120,success
+2026-09-15,15:49:55,adgbc,Gazer2D,0.5791,612,612,0.0922,608,611,2.5,2394,120,success
