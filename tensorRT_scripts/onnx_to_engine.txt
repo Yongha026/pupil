@@ -1,0 +1,42 @@
+### PTH TO ONNX
+
+    conda activate nnunet_mlu
+    cd /home/iulab9/PycharmProjects/nnUNet
+
+    # 2. Run export and parity verification
+    python pth_to_onnx.py \
+        --model_folder /mnt/hdd1/nnunetv2_openEDS/nnUNet_results/Dataset250_OpenEDS2019/nnUNetTrainerGBC_S_16__nnUNetPlans__2d/ \
+        --fold 0 \
+        --checkpoint_name checkpoint_final.pth \
+        --output_file nnunet_gbc_backbone.onnx \
+        --opset 17 \
+        --device cuda:0
+
+### ONNX TO ENGINE
+    conda activate nnunet_mlu
+    cd /home/iulab9/PycharmProjects/nnUNet                                                                                                                                       
+                                                                                                                                                                                 
+    python onnx_to_engine.py \                                                                                                                                                   
+        --onnx_file nnunet_gbc_backbone.onnx \                                                                                                                                   
+        --output_engine nnunet_gbc_backbone_a6000.engine \                                                                                                                       
+        --precision fp16 \                                                                                                                                                       
+        --min_batch 1 \                                                                                                                                                          
+        --opt_batch 1 \                                                                                                                                                          
+        --max_batch 8 \                                                                                                                                                          
+        --workspace_gb 8 \                                                                                                                                                       
+        --device 0                                                                                                                                                               
+                                                                                                                                                                                 
+  #### 2. Server 2: NVIDIA RTX 4090 (CUDA 12.2, 24GB VRAM)                                                                                                                       
+                                                                                                                                                                                 
+    conda activate nnunet_mlu                                                                                                                                                    
+    cd /home/iulab9/PycharmProjects/nnUNet                                                                                                                                       
+                                                                                                                                                                                 
+    python onnx_to_engine.py \                                                                                                                                                   
+        --onnx_file nnunet_gbc_backbone.onnx \                                                                                                                                   
+        --output_engine nnunet_gbc_backbone_4090.engine \                                                                                                                        
+        --precision fp16 \                                                                                                                                                       
+        --min_batch 1 \                                                                                                                                                          
+        --opt_batch 1 \                                                                                                                                                          
+        --max_batch 4 \                                                                                                                                                          
+        --workspace_gb 4 \                                                                                                                                                       
+        --device 0       
