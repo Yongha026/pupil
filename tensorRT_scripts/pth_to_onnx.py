@@ -136,8 +136,9 @@ def export_pth_to_onnx(
 
     # 5. Retrieve Configuration & Patch Dimensions
     patch_size = predictor.configuration_manager.patch_size
-    num_input_channels = predictor.configuration_manager.num_input_channels
+    num_input_channels = predictor.configuration_manager.input_channels
     print(f"[*] Input shape specifications: channels={num_input_channels}, patch_size={patch_size}")
+
 
     # 6. Generate Dummy Input (1, C, H, W) for 2D or (1, C, D, H, W) for 3D
     dummy_input = torch.randn(1, num_input_channels, *patch_size, device=device)
