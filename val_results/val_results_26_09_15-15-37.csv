@@ -1,0 +1,17 @@
+date,time,model,gazer_class,accuracy_deg,accuracy_used_samples,accuracy_total_samples,precision_deg,precision_used_samples,precision_total_samples,outlier_threshold_deg,pupil_positions_count,ref_points_count,status
+2026-09-15,15:38:34,adgbc_one_euro,Gazer2D,0.4397,639,639,0.0261,635,638,2.5,2364,120,success
+2026-09-15,15:38:43,adgbc_one_euro,Gazer2D,0.5249,621,621,0.04,617,620,2.5,2480,120,success
+2026-09-15,15:38:52,adgbc_one_euro,Gazer2D,0.545,634,634,0.0172,630,633,2.5,2300,120,success
+2026-09-15,15:39:01,adgbc_one_euro,Gazer2D,0.4965,647,647,0.0224,643,646,2.5,2370,120,success
+2026-09-15,15:39:11,adgbc_one_euro,Gazer2D,0.4813,626,626,0.0191,622,625,2.5,2324,120,success
+2026-09-15,15:39:24,adgbc_none,Gazer2D,0.4293,630,630,0.1277,626,629,2.5,2444,120,success
+2026-09-15,15:39:34,adgbc_none,Gazer2D,0.5132,612,612,0.1195,607,611,2.5,2356,120,success
+2026-09-15,15:39:43,adgbc_none,Gazer2D,0.602,645,645,0.1252,639,644,2.5,2420,120,success
+2026-09-15,15:39:52,adgbc_none,Gazer2D,0.5706,644,644,0.1314,637,643,2.5,2388,120,success
+2026-09-15,15:40:01,adgbc_none,Gazer2D,0.7354,647,649,0.1212,640,648,2.5,2496,120,success
+2026-09-15,15:40:10,adgbc_none,Gazer2D,0.6561,633,633,0.1201,627,632,2.5,2330,120,success
+2026-09-15,15:40:25,adgbc_ema,Gazer2D,0.7786,645,645,0.0205,641,644,2.5,2410,120,success
+2026-09-15,15:40:51,adgbc_ema,Gazer2D,0.5811,623,623,0.0182,619,622,2.5,2334,120,success
+2026-09-15,15:41:01,adgbc_ema,Gazer2D,0.3664,632,632,0.0177,628,631,2.5,2442,120,success
+2026-09-15,15:41:10,adgbc_ema,Gazer2D,0.6975,635,635,0.0153,629,634,2.5,2388,120,success
+2026-09-15,15:41:19,adgbc_ema,Gazer2D,0.5264,625,625,0.0295,621,624,2.5,2348,120,success
