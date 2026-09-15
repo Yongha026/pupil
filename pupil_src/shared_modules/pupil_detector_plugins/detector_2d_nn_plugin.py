@@ -682,10 +682,10 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         pupil_mask = np.zeros_like(pred, dtype=np.uint8)
         pupil_mask[pupil_pixels] = 255
 
-        if self.enable_smoothing:
-            # 1. Anti-aliasing Gaussian blur & thresholding to smooth discrete pixel staircase
-            pupil_mask = cv2.GaussianBlur(pupil_mask, (5, 5), 0)
-            _, pupil_mask = cv2.threshold(pupil_mask, 127, 255, cv2.THRESH_BINARY)
+        # if self.enable_smoothing:
+        #     # 1. Anti-aliasing Gaussian blur & thresholding to smooth discrete pixel staircase
+        #     pupil_mask = cv2.GaussianBlur(pupil_mask, (5, 5), 0)
+        #     _, pupil_mask = cv2.threshold(pupil_mask, 127, 255, cv2.THRESH_BINARY)
 
         # Fit ellipse to pupil contour
         contours, _ = cv2.findContours(
