@@ -50,7 +50,8 @@ AVAILABLE_MODELS: List[Tuple[str, str]] = [
     ("ulvmunet", "UltraLight-VMUNet"),
     ("ukan", "U-KAN"),
     ("adgbc", "AD-GBC"),
-    ("adgbc_400","AD-GBC_400"),
+    ("adgbc_400", "AD-GBC_400"),
+    ("adgbc_trt", "AD-GBC (TensorRT)"),
     ("2dcpp", "Classic C++ (2D)"),
 ]
 
@@ -422,6 +423,20 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
                 ).to(self.device)
                 self._load_state_dict(model, ckpt_path, "AD-GBC_400")
 
+            elif model_name == "adgbc_trt":
+                from pupil_detector_plugins.trt_detector_wrapper import TRTDetectorModule
+
+                candidates = [
+                    os.path.join(self.ckpt_dir, "adgbc_nn_best.engine"),
+                    os.path.join(self.ckpt_dir, "adgbc.engine"),
+                    os.path.join(self.ckpt_dir, "nnunet_gbc_backbone.engine"),
+                    os.path.join(self.plugin_dir, "adgbc_nn_best.engine"),
+                ]
+                engine_path = next(
+                    (p for p in candidates if os.path.exists(p)), candidates[0]
+                )
+                model = TRTDetectorModule(engine_path=engine_path, device=self.device)
+
             else:
                 logger.warning(f"Unknown neural network model requested: {model_name}")
 
@@ -713,7 +728,29 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         gray = self._extract_gray_image(frame)
         if gray is None:
             return self._create_empty_datum(frame.timestamp, raw_confidence=0.0)
-        tensor = self.get_img(gray).unsqueeze(0).to(self.device)
+
+        # Check if the active model requires a specific spatial input shape (e.g. TensorRT engine)
+        target_h = getattr(self.model, "expected_h", None)
+        target_w = getattr(self.model, "expected_w", None)
+
+        orig_h, orig_w = gray.shape[:2]
+        needs_rescale = (
+            target_h is not None
+            and target_w is not None
+            and (orig_h != target_h or orig_w != target_w)
+        )
+
+        if needs_rescale:
+            gray_proc = cv2.resize(
+                gray, (target_w, target_h), interpolation=cv2.INTER_AREA
+            )
+            scale_x = float(orig_w) / float(target_w)
+            scale_y = float(orig_h) / float(target_h)
+        else:
+            gray_proc = gray
+            scale_x, scale_y = 1.0, 1.0
+
+        tensor = self.get_img(gray_proc).unsqueeze(0).to(self.device)
         t_prep_end = time.perf_counter()
 
         # 3. Model inference
@@ -763,6 +800,12 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         best_contour = max(contours, key=cv2.contourArea)
+
+        if needs_rescale:
+            best_contour = best_contour.astype(np.float32)
+            best_contour[:, 0, 0] *= scale_x
+            best_contour[:, 0, 1] *= scale_y
+
         hull = cv2.convexHull(best_contour)
         if len(hull) < 5:
             self._prev_ellipse = None
