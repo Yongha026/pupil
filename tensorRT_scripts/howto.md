@@ -58,14 +58,19 @@ cp adgbc_nn_best.engine /path/to/pupil/pupil_src/shared_modules/pupil_detector_p
 ### Step 3: Run Engine Self-Test
 Verify that the engine and wrapper load cleanly in the Pupil environment:
 ```bash
-python -c "
+PYTHONPATH=pupil_src/shared_modules python -c "
 import torch
 from pupil_detector_plugins.trt_detector_wrapper import TRTDetectorModule
+device = torch.device('cuda:0')
 engine_file = 'pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.engine'
-module = TRTDetectorModule(engine_file, torch.device('cuda:0'))
-dummy = torch.randn(1, 1, module.expected_h, module.expected_w, device='cuda:0')
+module = TRTDetectorModule(engine_file, device)
+dummy = torch.randn(1, 1, module.expected_h, module.expected_w, device=device)
 out = module(dummy)
-print('Inference test succeeded! Output shape:', out.shape)
+print('=' * 50)
+print('TensorRT Inference Succeeded!')
+print('Output shape:', out.shape)
+print('Device:', out.device)
+print('=' * 50)
 assert out.shape == (1, 4, module.expected_h, module.expected_w)
 "
 ```

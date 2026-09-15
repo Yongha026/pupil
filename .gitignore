@@ -66,3 +66,5 @@ pupil_src/shared_modules/pupil_detector_plugins/adgbc_nn_best.pth
 *.pth
 latency_example.png
 ./logged_latencies/
+*.onnx
+*.engine
