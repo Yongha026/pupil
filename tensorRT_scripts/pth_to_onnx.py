@@ -136,7 +136,19 @@ def export_pth_to_onnx(
 
     # 5. Retrieve Configuration & Patch Dimensions
     patch_size = predictor.configuration_manager.patch_size
-    num_input_channels = predictor.configuration_manager.input_channels
+    try:
+        from nnunetv2.utilities.label_handling.label_handling import determine_num_input_channels
+        num_input_channels = determine_num_input_channels(
+            predictor.plans_manager, predictor.configuration_manager, predictor.dataset_json
+        )
+    except Exception:
+        dataset_json = getattr(predictor, "dataset_json", {}) or {}
+        if "channel_names" in dataset_json:
+            num_input_channels = len(dataset_json["channel_names"])
+        elif "modality" in dataset_json:
+            num_input_channels = len(dataset_json["modality"])
+        else:
+            num_input_channels = 1
     print(f"[*] Input shape specifications: channels={num_input_channels}, patch_size={patch_size}")
 
 
