@@ -77,6 +77,83 @@ def parse_args():
     return parser.parse_args()
 
 
+def _patch_lo2_for_tensorrt(network: torch.nn.Module):
+    """
+    In-memory patch: Replaces 'torch.chunk' with direct channel slicing
+    to prevent PyTorch from emitting ONNX 'SequenceAt' / 'SplitToSequence' nodes,
+    which TensorRT does not support. Does NOT modify archs_GBC.py on disk.
+    """
+    patched = 0
+    for module in network.modules():
+        if module.__class__.__name__ == "Lo2":
+            def make_trt_forward(m):
+                def trt_forward(x, H, W):
+                    B, N, C = x.shape
+
+                    ### DOR-MLP / OR-MLP with native Slice + Roll
+                    xn = x.transpose(1, 2).view(B, C, H, W).contiguous()
+                    x_shift = [torch.roll(xn[:, i : i + 1], i, 2) for i in range(C)]
+                    x_cat = torch.cat(x_shift, 1)
+                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_shift_r = x_s.transpose(1, 2)
+                    x_shift_r = m.fc1(x_shift_r)
+                    x_shift_r = m.act1(x_shift_r)
+                    x_shift_r = m.drop(x_shift_r)
+
+                    xn = x_shift_r.transpose(1, 2).view(B, C, H, W).contiguous()
+                    x_shift = [torch.roll(xn[:, i : i + 1], i, 3) for i in range(C)]
+                    x_cat = torch.cat(x_shift, 1)
+                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_shift_c = x_s.transpose(1, 2)
+                    x_shift_c = m.fc2(x_shift_c)
+                    x_1 = m.drop(x_shift_c)
+
+                    ### OR-MLP
+                    xn = x.transpose(1, 2).view(B, C, H, W).contiguous()
+                    x_shift = [torch.roll(xn[:, i : i + 1], -i, 3) for i in range(C)]
+                    x_cat = torch.cat(x_shift, 1)
+                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_shift_c = x_s.transpose(1, 2)
+                    x_shift_c = m.fc3(x_shift_c)
+                    x_shift_c = m.act1(x_shift_c)
+                    x_shift_c = m.drop(x_shift_c)
+
+                    xn = x_shift_c.transpose(1, 2).view(B, C, H, W).contiguous()
+                    x_shift = [torch.roll(xn[:, i : i + 1], i, 2) for i in range(C)]
+                    x_cat = torch.cat(x_shift, 1)
+                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_shift_r = x_s.transpose(1, 2)
+                    x_shift_r = m.fc4(x_shift_r)
+                    x_2 = m.drop(x_shift_r)
+
+                    x_1 = torch.add(x_1, x)
+                    x_2 = torch.add(x_2, x)
+                    x1 = torch.cat([x_1, x_2], dim=2)
+                    x1 = m.norm1(x1)
+                    x1 = m.fc5(x1)
+                    x1 = m.drop(x1)
+                    x1 = torch.add(x1, x)
+                    x2 = x.transpose(1, 2).view(B, C, H, W)
+
+                    ### DSC
+                    x2 = m.dwconv(x2, H, W)
+                    x2 = m.act2(x2)
+                    x2 = m.norm2(x2)
+                    x2 = x2.flatten(2).transpose(1, 2)
+
+                    x3 = torch.cat([x1, x2], dim=2)
+                    x3 = m.fc6(x3)
+                    x3 = m.drop(x3)
+                    return x3
+                return trt_forward
+
+            module.forward = make_trt_forward(module)
+            patched += 1
+
+    if patched > 0:
+        print(f"[*] In-memory patched {patched} Lo2 layer(s) for TensorRT compatibility (0 SequenceAt nodes).")
+
+
 def export_pth_to_onnx(
     model_folder: str,
     fold: str = "0",
@@ -127,6 +204,7 @@ def export_pth_to_onnx(
     network = predictor.network.to(device)
     network.eval()
     print(f"[*] Successfully loaded network architecture: {network.__class__.__name__}")
+    _patch_lo2_for_tensorrt(network)
 
     # For GBC / Rolling-UNet: in eval mode, network forward only returns the segmentation logits 'out'
     # Deep supervision: disable if present in decoder
