@@ -80,51 +80,59 @@ def _patch_lo2_for_tensorrt(network: torch.nn.Module):
             def make_trt_forward(m):
                 def trt_forward(x, H, W):
                     B, N, C = x.shape
+                    H_val = int(H.item()) if hasattr(H, "item") else int(H)
+                    W_val = int(W.item()) if hasattr(W, "item") else int(W)
 
-                    ### DOR-MLP / OR-MLP with native Slice + Roll (strictly modulo H, W)
-                    xn = x.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [
-                        torch.roll(xn[:, i : i + 1], i % H, 2) if (i % H) != 0 else xn[:, i : i + 1]
-                        for i in range(C)
-                    ]
+                    def roll_h(t, shift):
+                        s = int(shift) % H_val
+                        if s == 0:
+                            return t
+                        return torch.cat([t[:, :, -s:, :], t[:, :, :-s, :]], dim=2)
+
+                    def roll_w(t, shift):
+                        s = int(shift) % W_val
+                        if s == 0:
+                            return t
+                        return torch.cat([t[:, :, :, -s:], t[:, :, :, :-s]], dim=3)
+
+                    def roll_w_neg(t, shift):
+                        s = int(shift) % W_val
+                        if s == 0:
+                            return t
+                        return torch.cat([t[:, :, :, s:], t[:, :, :, :s]], dim=3)
+
+                    ### DOR-MLP / OR-MLP with native bounded Slice + Roll
+                    xn = x.transpose(1, 2).view(B, C, H_val, W_val).contiguous()
+                    x_shift = [roll_h(xn[:, i : i + 1], i) for i in range(C)]
                     x_cat = torch.cat(x_shift, 1)
-                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_s = x_cat.reshape(B, C, H_val * W_val).contiguous()
                     x_shift_r = x_s.transpose(1, 2)
                     x_shift_r = m.fc1(x_shift_r)
                     x_shift_r = m.act1(x_shift_r)
                     x_shift_r = m.drop(x_shift_r)
 
-                    xn = x_shift_r.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [
-                        torch.roll(xn[:, i : i + 1], i % W, 3) if (i % W) != 0 else xn[:, i : i + 1]
-                        for i in range(C)
-                    ]
+                    xn = x_shift_r.transpose(1, 2).view(B, C, H_val, W_val).contiguous()
+                    x_shift = [roll_w(xn[:, i : i + 1], i) for i in range(C)]
                     x_cat = torch.cat(x_shift, 1)
-                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_s = x_cat.reshape(B, C, H_val * W_val).contiguous()
                     x_shift_c = x_s.transpose(1, 2)
                     x_shift_c = m.fc2(x_shift_c)
                     x_1 = m.drop(x_shift_c)
 
                     ### OR-MLP
-                    xn = x.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [
-                        torch.roll(xn[:, i : i + 1], (-i) % W, 3) if ((-i) % W) != 0 else xn[:, i : i + 1]
-                        for i in range(C)
-                    ]
+                    xn = x.transpose(1, 2).view(B, C, H_val, W_val).contiguous()
+                    x_shift = [roll_w_neg(xn[:, i : i + 1], i) for i in range(C)]
                     x_cat = torch.cat(x_shift, 1)
-                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_s = x_cat.reshape(B, C, H_val * W_val).contiguous()
                     x_shift_c = x_s.transpose(1, 2)
                     x_shift_c = m.fc3(x_shift_c)
                     x_shift_c = m.act1(x_shift_c)
                     x_shift_c = m.drop(x_shift_c)
 
-                    xn = x_shift_c.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [
-                        torch.roll(xn[:, i : i + 1], i % H, 2) if (i % H) != 0 else xn[:, i : i + 1]
-                        for i in range(C)
-                    ]
+                    xn = x_shift_c.transpose(1, 2).view(B, C, H_val, W_val).contiguous()
+                    x_shift = [roll_h(xn[:, i : i + 1], i) for i in range(C)]
                     x_cat = torch.cat(x_shift, 1)
-                    x_s = x_cat.reshape(B, C, H * W).contiguous()
+                    x_s = x_cat.reshape(B, C, H_val * W_val).contiguous()
                     x_shift_r = x_s.transpose(1, 2)
                     x_shift_r = m.fc4(x_shift_r)
                     x_2 = m.drop(x_shift_r)
@@ -136,10 +144,10 @@ def _patch_lo2_for_tensorrt(network: torch.nn.Module):
                     x1 = m.fc5(x1)
                     x1 = m.drop(x1)
                     x1 = torch.add(x1, x)
-                    x2 = x.transpose(1, 2).view(B, C, H, W)
+                    x2 = x.transpose(1, 2).view(B, C, H_val, W_val)
 
                     ### DSC
-                    x2 = m.dwconv(x2, H, W)
+                    x2 = m.dwconv(x2, H_val, W_val)
                     x2 = m.act2(x2)
                     x2 = m.norm2(x2)
                     x2 = x2.flatten(2).transpose(1, 2)
