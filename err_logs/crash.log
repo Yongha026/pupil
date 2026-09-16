@@ -1,0 +1,86 @@
+           INFO     world - accuracy_visualizer: Raw session data exported to: /home/byeongjun/PycharmProjects/pupil_nnunets/val_results/raw_data/validation_adgbc_trt_2026-09-16_10-43-02  accuracy_visualizer.py:872
+[10:43:06] INFO     world - calibration_choreography.base_plugin: Starting  Validation                                                                                                              base_plugin.py:628
+[10:43:07] INFO     world - waterfall_logger: Waterfall logging started (validation) -> /home/byeongjun/PycharmProjects/pupil_nnunets/logged_latencies/waterfall_2026-09-16_10-41-28.csv        waterfall_logger.py:71
+[10:43:12] ERROR    world - launchables.world: Process Capture crashed with trace:                                                                                                                        world.py:977
+                    Traceback (most recent call last):                                                                                                                                                                
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 868, in world                                                                                         
+                        p.recent_events(events)                                                                                                                                                                       
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_data_relay.py", line 49, in recent_events                                                                    
+                        mapped_gazes = list(gazer.map_pupil_to_gaze([pupil_datum]))                                                                                                                                   
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gaze_mapping/gazer_base.py", line 375, in map_pupil_to_gaze                                                        
+                        yield from self.predict(matches)                                                                                                                                                              
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gaze_mapping/gazer_2d.py", line 221, in predict                                                                    
+                        gaze_positions = self.left_model.predict(X).tolist()                                                                                                                                          
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                   
+                      File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gaze_mapping/gazer_2d.py", line 106, in predict                                                                    
+                        return self._regressor.predict(polynomial_features)                                                                                                                                           
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                           
+                      File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 355, in predict                                                            
+                        return super().predict(X)                                                                                                                                                                     
+                               ^^^^^^^^^^^^^^^^^^                                                                                                                                                                     
+                      File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 316, in predict                                                            
+                        return self._decision_function(X)                                                                                                                                                             
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                                             
+                      File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 294, in _decision_function                                                 
+                        X = validate_data(self, X, accept_sparse=["csr", "csc", "coo"], reset=False)                                                                                                                  
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                  
+                      File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 3038, in validate_data                                                       
+                        out = check_array(X, input_name="X", **check_params)                                                                                                                                          
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                                                                                                                                          
+                      File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 1087, in check_array                                                         
+                        _assert_all_finite(                                                                                                                                                                           
+                      File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 137, in _assert_all_finite                                                   
+                        _assert_all_finite_element_wise(                                                                                                                                                              
+                      File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 186, in _assert_all_finite_element_wise                                      
+                        raise ValueError(msg_err)                                                                                                                                                                     
+                    ValueError: Input X contains NaN.                                                                                                                                                                 
+                    LinearRegression does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and                  
+                    Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or               
+                    drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page:                     
+                    https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values                                                                                                             
+                                                                                                                                                                                                                      
+           INFO     world - calibration_choreography.base_plugin: Stopping  Validation                                                                                                              base_plugin.py:667
+           INFO     world - waterfall_logger: Waterfall logging stopped (validation) -> /home/byeongjun/PycharmProjects/pupil_nnunets/logged_latencies/waterfall_2026-09-16_10-41-28.csv        waterfall_logger.py:82
+Process world:
+Traceback (most recent call last):
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/launchables/world.py", line 868, in world
+    p.recent_events(events)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_data_relay.py", line 49, in recent_events
+    mapped_gazes = list(gazer.map_pupil_to_gaze([pupil_datum]))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gaze_mapping/gazer_base.py", line 375, in map_pupil_to_gaze
+    yield from self.predict(matches)
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gaze_mapping/gazer_2d.py", line 221, in predict
+    gaze_positions = self.left_model.predict(X).tolist()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/gaze_mapping/gazer_2d.py", line 106, in predict
+    return self._regressor.predict(polynomial_features)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 355, in predict
+    return super().predict(X)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 316, in predict
+    return self._decision_function(X)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 294, in _decision_function
+    X = validate_data(self, X, accept_sparse=["csr", "csc", "coo"], reset=False)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 3038, in validate_data
+    out = check_array(X, input_name="X", **check_params)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 1087, in check_array
+    _assert_all_finite(
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 137, in _assert_all_finite
+    _assert_all_finite_element_wise(
+  File "/home/byeongjun/anaconda3/envs/pupil_nnunets/lib/python3.11/site-packages/sklearn/utils/validation.py", line 186, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input X contains NaN.
+LinearRegression does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values
+[10:43:14] INFO     eye0 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.                                                                   detector_2d_nn_plugin.py:340
+           INFO     eye1 - pupil_detector_plugins.detector_2d_nn_plugin: Unloaded previous model and cleared GPU cache.   
+
