@@ -81,9 +81,12 @@ def _patch_lo2_for_tensorrt(network: torch.nn.Module):
                 def trt_forward(x, H, W):
                     B, N, C = x.shape
 
-                    ### DOR-MLP / OR-MLP with native Slice + Roll
+                    ### DOR-MLP / OR-MLP with native Slice + Roll (strictly modulo H, W)
                     xn = x.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [torch.roll(xn[:, i : i + 1], i, 2) for i in range(C)]
+                    x_shift = [
+                        torch.roll(xn[:, i : i + 1], i % H, 2) if (i % H) != 0 else xn[:, i : i + 1]
+                        for i in range(C)
+                    ]
                     x_cat = torch.cat(x_shift, 1)
                     x_s = x_cat.reshape(B, C, H * W).contiguous()
                     x_shift_r = x_s.transpose(1, 2)
@@ -92,7 +95,10 @@ def _patch_lo2_for_tensorrt(network: torch.nn.Module):
                     x_shift_r = m.drop(x_shift_r)
 
                     xn = x_shift_r.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [torch.roll(xn[:, i : i + 1], i, 3) for i in range(C)]
+                    x_shift = [
+                        torch.roll(xn[:, i : i + 1], i % W, 3) if (i % W) != 0 else xn[:, i : i + 1]
+                        for i in range(C)
+                    ]
                     x_cat = torch.cat(x_shift, 1)
                     x_s = x_cat.reshape(B, C, H * W).contiguous()
                     x_shift_c = x_s.transpose(1, 2)
@@ -101,7 +107,10 @@ def _patch_lo2_for_tensorrt(network: torch.nn.Module):
 
                     ### OR-MLP
                     xn = x.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [torch.roll(xn[:, i : i + 1], -i, 3) for i in range(C)]
+                    x_shift = [
+                        torch.roll(xn[:, i : i + 1], (-i) % W, 3) if ((-i) % W) != 0 else xn[:, i : i + 1]
+                        for i in range(C)
+                    ]
                     x_cat = torch.cat(x_shift, 1)
                     x_s = x_cat.reshape(B, C, H * W).contiguous()
                     x_shift_c = x_s.transpose(1, 2)
@@ -110,7 +119,10 @@ def _patch_lo2_for_tensorrt(network: torch.nn.Module):
                     x_shift_c = m.drop(x_shift_c)
 
                     xn = x_shift_c.transpose(1, 2).view(B, C, H, W).contiguous()
-                    x_shift = [torch.roll(xn[:, i : i + 1], i, 2) for i in range(C)]
+                    x_shift = [
+                        torch.roll(xn[:, i : i + 1], i % H, 2) if (i % H) != 0 else xn[:, i : i + 1]
+                        for i in range(C)
+                    ]
                     x_cat = torch.cat(x_shift, 1)
                     x_s = x_cat.reshape(B, C, H * W).contiguous()
                     x_shift_r = x_s.transpose(1, 2)
@@ -240,10 +252,47 @@ def export_adgbc(
             mean_diff = float(np.mean(np.abs(pyt_np - ort_out)))
             agree = float(np.mean(np.argmax(pyt_np, axis=1) == np.argmax(ort_out, axis=1)) * 100.0)
 
-            print(f"[+] Numerical Parity (PyTorch vs ORT {session.get_providers()[0]}):")
+            print(f"[+] Numerical Parity (PyTorch vs ORT {session.get_providers()[0]} on Random Tensor):")
             print(f"    - Max absolute difference:  {max_diff:.6f}")
             print(f"    - Mean absolute difference: {mean_diff:.6f}")
             print(f"    - Class label agreement:    {agree:.2f}%")
+
+            # Verify on real eye image if available
+            real_img_candidates = [
+                os.path.join(pupil_shared_dir, "..", "..", "jw_192.png"),
+                os.path.join(pupil_shared_dir, "..", "..", "jw.png"),
+            ]
+            real_img_path = next((p for p in real_img_candidates if os.path.isfile(p)), None)
+            if real_img_path:
+                import cv2
+                import torchvision
+                import PIL.Image
+                raw_im = cv2.imread(real_img_path, cv2.IMREAD_GRAYSCALE)
+                if raw_im is not None:
+                    if raw_im.shape[:2] != (height, width):
+                        raw_im = cv2.resize(raw_im, (width, height), interpolation=cv2.INTER_AREA)
+                    table = (float(255) * (np.linspace(0, 1, 256) ** 0.8)).astype(np.uint8)
+                    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
+                    enhanced = clahe.apply(cv2.LUT(raw_im, table))
+                    tf = torchvision.transforms.Compose([
+                        torchvision.transforms.ToTensor(),
+                        torchvision.transforms.Normalize([0.5], [0.5]),
+                    ])
+                    real_tensor = tf(PIL.Image.fromarray(enhanced)).unsqueeze(0).to(device)
+                    with torch.no_grad():
+                        pyt_real = model(real_tensor)
+                        if isinstance(pyt_real, tuple):
+                            pyt_real = pyt_real[0]
+                    ort_real = session.run(None, {"input": real_tensor.detach().cpu().numpy()})[0]
+                    pyt_real_np = pyt_real.detach().cpu().numpy()
+                    real_max_diff = float(np.max(np.abs(pyt_real_np - ort_real)))
+                    real_agree = float(np.mean(np.argmax(pyt_real_np, axis=1) == np.argmax(ort_real, axis=1)) * 100.0)
+                    p_pyt = int((np.argmax(pyt_real_np, axis=1) == 3).sum())
+                    p_ort = int((np.argmax(ort_real, axis=1) == 3).sum())
+                    print(f"\n[+] Real Eye Image Parity ({os.path.basename(real_img_path)}):")
+                    print(f"    - Max logit difference:     {real_max_diff:.6f}")
+                    print(f"    - Class label agreement:    {real_agree:.2f}%")
+                    print(f"    - Pupil pixels (PyT vs ORT): {p_pyt} vs {p_ort}")
             print("=" * 60 + "\n")
         except ImportError:
             print("[!] onnxruntime not installed, skipping verification.")

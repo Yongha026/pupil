@@ -564,3 +564,46 @@ def run_inference():
 
 if __name__ == "__main__":
     run_inference()
+
+###################### RESULT ######################
+# 2026-09-16 11:27:49,046 [INFO] ======================================================================
+# 2026-09-16 11:27:49,046 [INFO]  AD-GBC Single Image Parity Evaluation: PyTorch vs TensorRT
+# 2026-09-16 11:27:49,046 [INFO] ======================================================================
+# 2026-09-16 11:27:49,046 [INFO] Target Device:     cuda:0
+# 2026-09-16 11:27:49,046 [INFO] Input Image:       /home/byeongjun/PycharmProjects/pupil_nnunets/jw_192.png
+# 2026-09-16 11:27:49,046 [INFO] PyTorch (.pth):    /home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth
+# 2026-09-16 11:27:49,046 [INFO] TensorRT (.engine):/home/byeongjun/PycharmProjects/pupil_nnunets/pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.engine
+# 2026-09-16 11:27:49,046 [INFO] Target Shape:      (192, 192)
+# 2026-09-16 11:27:49,114 [INFO] Input image loaded: orig_shape=(192, 192) -> preprocessed_tensor=(1, 1, 192, 192)
+# 2026-09-16 11:27:49,114 [INFO] [*] Loading PyTorch model...
+# 2026-09-16 11:27:49,827 [INFO] [*] Loading TensorRT engine...
+# 2026-09-16 11:27:49,878 [INFO] Initialized TRTDetectorModule: input='input' (1, 1, 192, 192), target_hw=(192, 192), classes=4
+#
+# ======================================================================
+#                       EVALUATION RESULTS
+# ======================================================================
+#  [A] PyTorch (.pth) Inference:
+#      - Pupil Pixel Count:   221 pixels
+#      - Mean Confidence:     0.9840
+#      - Latency:             8.31 ms (+/- 0.14 ms)
+#      - Fitted Center (X,Y): (111.21, 75.67)
+#      - Fitted Axes (m, M):  (14.24, 19.27) px
+#      - Ellipse Angle:       95.7 deg
+# ----------------------------------------------------------------------
+#  [B] TensorRT (.engine) Inference:
+#      - Pupil Pixel Count:   128 pixels
+#      - Mean Confidence:     0.8644
+#      - Latency:             0.46 ms (+/- 0.01 ms)
+#      - Speedup:             18.2x vs PyTorch
+#      - Fitted Center (X,Y): (112.35, 74.85)
+#      - Fitted Axes (m, M):  (10.19, 15.69) px
+#      - Ellipse Angle:       101.1 deg
+# ----------------------------------------------------------------------
+#  [C] Parity & Concordance Metrics:
+#      - Pupil IoU:           57.92% (Intersection=128, Union=221)
+#      - All-Class Agreement: 85.12%
+#      - Center Drift:        1.40 px
+#      - Logit Max Diff:      13.658829
+#      - Logit Mean Diff:     1.163727
+#      - Logit RMSE:          2.214137
+# ======================================================================
