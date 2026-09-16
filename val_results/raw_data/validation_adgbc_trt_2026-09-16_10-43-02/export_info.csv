@@ -1,0 +1,11 @@
+key,value
+session_type,validation
+model,adgbc_trt
+gazer_class,Gazer2D
+timestamp,2026-09-16_10-43-02
+accuracy_deg,1.65599
+precision_deg,0.0702
+outlier_threshold_deg,2.5
+pupil_count,4144
+ref_count,120
+gaze_count,2072
