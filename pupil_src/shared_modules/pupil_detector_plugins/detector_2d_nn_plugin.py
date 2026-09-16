@@ -220,7 +220,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         self,
         g_pool=None,
         active_model: str = "adgbc",
-        confidence_threshold: float = 0.6,
+        confidence_threshold: float = 0.4,
         show_confidence_graph: bool = True,
         enable_smoothing: bool = True,
         smoothing_method: str = "one_euro",
@@ -426,16 +426,18 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             elif model_name == "adgbc_trt":
                 from pupil_detector_plugins.trt_detector_wrapper import TRTDetectorModule
 
-                # candidates = [
-                #     os.path.join(self.ckpt_dir, "adgbc_nn_best.engine"),
-                #     os.path.join(self.ckpt_dir, "adgbc.engine"),
-                #     os.path.join(self.ckpt_dir, "nnunet_gbc_backbone.engine"),
-                #     os.path.join(self.plugin_dir, "adgbc_nn_best.engine"),
-                # ]
-                # engine_path = next(
-                #     (p for p in candidates if os.path.exists(p)), candidates[0]
-                # )
-                engine_path = os.path.join(self.ckpt_dir, "adgbc_nn_best.engine")
+                candidates = [
+                    os.path.join(self.ckpt_dir, "adgbc_nn_best.engine"),
+                    os.path.join(self.ckpt_dir, "adgbc_nn_best_32.engine"),
+                    os.path.join(os.getcwd(), "adgbc_nn_best_32.engine"),
+                    os.path.join(os.getcwd(), "adgbc_nn_best.engine"),
+                    os.path.join(self.ckpt_dir, "adgbc.engine"),
+                    os.path.join(self.ckpt_dir, "nnunet_gbc_backbone.engine"),
+                ]
+                engine_path = next(
+                    (p for p in candidates if os.path.exists(p)), candidates[0]
+                )
+                logger.info(f"Loading TensorRT engine from: {engine_path}")
                 model = TRTDetectorModule(engine_path=engine_path, device=self.device)
 
             else:
@@ -808,14 +810,24 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             best_contour[:, 0, 1] *= scale_y
 
         hull = cv2.convexHull(best_contour)
-        if len(hull) < 5:
-            self._prev_ellipse = None
-            if hasattr(self, "_one_euro_filter"):
-                self._one_euro_filter.reset()
-            return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
-
-        ellipse = cv2.fitEllipse(hull)
-        (cx, cy), (d1, d2), angle_deg = ellipse
+        if len(hull) >= 5:
+            ellipse = cv2.fitEllipse(hull)
+            (cx, cy), (d1, d2), angle_deg = ellipse
+        elif len(best_contour) >= 5:
+            ellipse = cv2.fitEllipse(best_contour)
+            (cx, cy), (d1, d2), angle_deg = ellipse
+        elif len(best_contour) >= 3:
+            (cx, cy), radius = cv2.minEnclosingCircle(best_contour)
+            d1 = d2 = float(radius * 2.0)
+            angle_deg = 0.0
+        else:
+            if self._prev_ellipse is not None and raw_conf > 0.4:
+                (cx, cy), (d1, d2), angle_deg = self._prev_ellipse
+            else:
+                self._prev_ellipse = None
+                if hasattr(self, "_one_euro_filter"):
+                    self._one_euro_filter.reset()
+                return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         # Guarantee axes[0] is minor_diameter and axes[1] is major_diameter (axes[0] <= axes[1])
         if d1 > d2:
@@ -830,8 +842,13 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         area = cv2.contourArea(best_contour)
         aspect_ratio = minor_d / (major_d + 1e-6)
 
+        # Adaptive minimum area threshold: scale with effective frame area
+        frame_area = float(getattr(frame, "width", 640) * getattr(frame, "height", 400))
+        min_area_thresh = 15.0 if needs_rescale else max(3.0, 15.0 * (frame_area / (640.0 * 400.0)))
+        min_aspect_thresh = 0.10
+
         # 2. Blink & noise rejection filter (reject when eye is almost closed or area is tiny)
-        if aspect_ratio < 0.20 or area < 15.0:
+        if aspect_ratio < min_aspect_thresh or area < min_area_thresh:
             self._prev_ellipse = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
