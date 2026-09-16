@@ -29,3 +29,14 @@ model: adgbc_ema, total 4 runs, accuracy=0.4344 ± 0.0507, precision=0.0270 ± 0
     thresh 1.0이 0.8보다 낫다.
 model: adgbc_trt_one_euro, total 5 runs, accuracy=0.4527 ± 0.1351, precision=0.0156 ± 0.0013 Thresh 1.0
 model: adgbc_trt_one_euro, total 5 runs, accuracy=0.5268 ± 0.1090, precision=0.0182 ± 0.0034 Thresh 0.8
+
+==Thresh = 1.0 ==
+    필터 끄고 cal
+model: adgbc_none          , total 5 runs, accuracy=0.6848 ± 0.0208, precision=0.0957 ± 0.0043
+model: adgbc_one_euro      , total 5 runs, accuracy=0.6554 ± 0.0376, precision=0.0163 ± 0.0049
+model: adgbc_trt_none      , total 5 runs, accuracy=0.6291 ± 0.0418, precision=0.0953 ± 0.0034
+model: adgbc_trt_one_euro  , total 5 runs, accuracy=0.6177 ± 0.0729, precision=0.0166 ± 0.0039 - BEST?
+    필터 켜고 cal
+model: adgbc_one_euro      , total 5 runs, accuracy=0.6457 ± 0.0245, precision=0.0232 ± 0.0060
+model: adgbc_trt_one_euro  , total 5 runs, accuracy=0.6398 ± 0.0407, precision=0.0160 ± 0.0013
+왜 또 안 나오냐ㅋㅋ
