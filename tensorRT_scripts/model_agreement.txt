@@ -1,0 +1,36 @@
+PYTHONPATH=pupil_src/shared_modules/ python -c "
+import torch, numpy as np
+from pupil_detector_plugins.trt_detector_wrapper import TRTDetectorModule
+from pupil_detector_plugins import adgbc
+
+device = torch.device('cuda:0')
+engine_path = 'pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.engine'
+pth_path = 'pupil_src/shared_modules/pupil_detector_plugins/model_ckpts/adgbc_nn_best.pth'
+
+# 1. Inspect Engine I/O Data Types
+trt_mod = TRTDetectorModule(engine_path, device)
+in_dtype = trt_mod.engine.get_tensor_dtype(trt_mod.input_name)
+out_dtype = trt_mod.engine.get_tensor_dtype(trt_mod.output_name)
+print(f'[1] TRT Input dtype: {in_dtype} | TRT Output dtype: {out_dtype}')
+
+# 2. Test TRT Forward Output
+dummy = torch.randn(1, 1, trt_mod.expected_h, trt_mod.expected_w, device=device)
+trt_out = trt_mod(dummy)
+print(f'[2] TRT Output shape: {trt_out.shape}')
+print(f'    TRT Output min: {trt_out.min().item():.3f}, max: {trt_out.max().item():.3f}, has_nan: {torch.isnan(trt_out).any().item()}')
+
+# 3. Direct Parity Check vs PyTorch .pth on the same dummy tensor
+pyt_mod = adgbc.GBC_Rolling_Unet_S(num_classes=4, input_channels=1, deep_supervision=False).to(device)
+ckpt = torch.load(pth_path, map_location=device, weights_only=False)
+pyt_mod.load_state_dict(ckpt['network_weights'] if 'network_weights' in ckpt else ckpt)
+pyt_mod.eval()
+
+with torch.no_grad():
+    pyt_out = pyt_mod(dummy)
+
+max_diff = torch.max(torch.abs(pyt_out - trt_out)).item()
+agreement = (torch.argmax(pyt_out, dim=1) == torch.argmax(trt_out, dim=1)).float().mean().item() * 100.0
+print(f'[3] Numerical comparison (PyTorch vs TensorRT):')
+print(f'    Max absolute difference: {max_diff:.4f}')
+print(f'    Argmax class agreement:  {agreement:.2f}%')
+"

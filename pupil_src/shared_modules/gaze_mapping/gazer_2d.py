@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import abc
 import logging
+import math
 import typing as T
 
 import numpy as np
@@ -102,6 +103,9 @@ class Model2D(Model):
 
     def predict(self, X):
         self._validate_feature_dimensionality(X)
+        if np.any(np.isnan(X)) or np.any(np.isinf(X)):
+            logger.warning("Gazer2D received NaN or Inf in feature array X. Suppressing crash and returning zeros.")
+            return np.zeros((X.shape[0], 2))
         polynomial_features = self._polynomial_features(X)
         return self._regressor.predict(polynomial_features)
 
@@ -245,6 +249,21 @@ class Gazer2D(GazerBase):
     def filter_pupil_data(
         self, pupil_data: T.Iterable, confidence_threshold: T.Optional[float] = None
     ) -> T.Iterable:
-        pupil_data = list(filter(lambda p: "2d" in p["method"], pupil_data))
+        pupil_data = list(filter(lambda p: "2d" in p.get("method", ""), pupil_data))
         pupil_data = super().filter_pupil_data(pupil_data, confidence_threshold)
-        return pupil_data
+        cleaned = []
+        for p in pupil_data:
+            pos = p.get("norm_pos", None)
+            conf = p.get("confidence", 0.0)
+            if pos is None or conf <= 0.0:
+                continue
+            try:
+                x, y = float(pos[0]), float(pos[1])
+                if math.isnan(x) or math.isnan(y) or math.isinf(x) or math.isinf(y):
+                    continue
+                if x == 0.0 and y == 0.0:
+                    continue
+                cleaned.append(p)
+            except (TypeError, IndexError, ValueError):
+                continue
+        return cleaned

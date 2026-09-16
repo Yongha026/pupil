@@ -91,6 +91,13 @@ class OneEuroFilter:
 
     def filter(self, x: float, timestamp: Optional[float] = None) -> float:
         x = float(x)
+        if math.isnan(x) or math.isinf(x):
+            self.reset()
+            return x
+
+        if self.x_prev is not None and (math.isnan(self.x_prev) or math.isinf(self.x_prev)):
+            self.reset()
+
         if self.x_prev is None:
             self.x_prev = x
             self.dx_prev = 0.0
@@ -125,6 +132,9 @@ class OneEuroFilter:
 
         # 3. Filter signal
         x_hat = alpha * x + (1.0 - alpha) * self.x_prev
+        if math.isnan(x_hat) or math.isinf(x_hat):
+            self.reset()
+            return x
         self.x_prev = x_hat
         return x_hat
 
@@ -426,17 +436,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             elif model_name == "adgbc_trt":
                 from pupil_detector_plugins.trt_detector_wrapper import TRTDetectorModule
 
-                candidates = [
-                    os.path.join(self.ckpt_dir, "adgbc_nn_best.engine"),
-                    os.path.join(self.ckpt_dir, "adgbc_nn_best_32.engine"),
-                    os.path.join(os.getcwd(), "adgbc_nn_best_32.engine"),
-                    os.path.join(os.getcwd(), "adgbc_nn_best.engine"),
-                    os.path.join(self.ckpt_dir, "adgbc.engine"),
-                    os.path.join(self.ckpt_dir, "nnunet_gbc_backbone.engine"),
-                ]
-                engine_path = next(
-                    (p for p in candidates if os.path.exists(p)), candidates[0]
-                )
+                engine_path = os.path.join(self.ckpt_dir, "adgbc_nn_best.engine")
                 logger.info(f"Loading TensorRT engine from: {engine_path}")
                 model = TRTDetectorModule(engine_path=engine_path, device=self.device)
 
@@ -810,16 +810,37 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             best_contour[:, 0, 1] *= scale_y
 
         hull = cv2.convexHull(best_contour)
+        ellipse = None
         if len(hull) >= 5:
-            ellipse = cv2.fitEllipse(hull)
+            try:
+                ellipse = cv2.fitEllipse(hull)
+            except Exception:
+                ellipse = None
+        if ellipse is None and len(best_contour) >= 5:
+            try:
+                ellipse = cv2.fitEllipse(best_contour)
+            except Exception:
+                ellipse = None
+
+        if ellipse is not None:
             (cx, cy), (d1, d2), angle_deg = ellipse
-        elif len(best_contour) >= 5:
-            ellipse = cv2.fitEllipse(best_contour)
+            if any(math.isnan(v) or math.isinf(v) for v in (cx, cy, d1, d2, angle_deg)) or d1 <= 0 or d2 <= 0:
+                ellipse = None
+
+        if ellipse is not None:
             (cx, cy), (d1, d2), angle_deg = ellipse
         elif len(best_contour) >= 3:
             (cx, cy), radius = cv2.minEnclosingCircle(best_contour)
             d1 = d2 = float(radius * 2.0)
             angle_deg = 0.0
+            if any(math.isnan(v) or math.isinf(v) for v in (cx, cy, d1, d2, angle_deg)) or radius <= 0:
+                if self._prev_ellipse is not None and raw_conf > 0.4:
+                    (cx, cy), (d1, d2), angle_deg = self._prev_ellipse
+                else:
+                    self._prev_ellipse = None
+                    if hasattr(self, "_one_euro_filter"):
+                        self._one_euro_filter.reset()
+                    return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
         else:
             if self._prev_ellipse is not None and raw_conf > 0.4:
                 (cx, cy), (d1, d2), angle_deg = self._prev_ellipse
@@ -839,6 +860,12 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             major_d = float(d2)
             angle_deg = angle_deg % 180.0
 
+        if any(math.isnan(v) or math.isinf(v) for v in (cx, cy, minor_d, major_d, angle_deg)) or major_d <= 0:
+            self._prev_ellipse = None
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
+            return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
+
         area = cv2.contourArea(best_contour)
         aspect_ratio = minor_d / (major_d + 1e-6)
 
@@ -848,7 +875,7 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
         min_aspect_thresh = 0.10
 
         # 2. Blink & noise rejection filter (reject when eye is almost closed or area is tiny)
-        if aspect_ratio < min_aspect_thresh or area < min_area_thresh:
+        if math.isnan(aspect_ratio) or math.isnan(area) or aspect_ratio < min_aspect_thresh or area < min_area_thresh:
             self._prev_ellipse = None
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
@@ -904,6 +931,12 @@ class nnUNetDetector2DPlugin(PupilDetectorPlugin):
             self._consecutive_jumps = 0
             if hasattr(self, "_one_euro_filter"):
                 self._one_euro_filter.reset()
+
+        if any(math.isnan(v) or math.isinf(v) for v in (cx, cy, minor_d, major_d, angle_deg)):
+            self._prev_ellipse = None
+            if hasattr(self, "_one_euro_filter"):
+                self._one_euro_filter.reset()
+            return self._create_empty_datum(frame.timestamp, raw_confidence=raw_conf)
 
         t_filter_end = time.perf_counter()
         filter_ms = (t_filter_end - t_filter_start) * 1000.0 if self._smoothing_method != "none" else 0.0
