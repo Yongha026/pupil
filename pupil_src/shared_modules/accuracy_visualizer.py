@@ -195,7 +195,7 @@ class Accuracy_Visualizer(Plugin):
     def __init__(
         self,
         g_pool,
-        outlier_threshold=2.5,
+        outlier_threshold=1.0,
         vis_mapping_error=True,
         vis_calibration_area=True,
     ):
@@ -226,7 +226,7 @@ class Accuracy_Visualizer(Plugin):
         filename = f"val_results_{date_str}.csv"
         self.csv_path = os.path.join(self.val_dir, filename)
 
-        self.export_raw_data =True
+        self.export_raw_data =False
 
     def init_ui(self):
         from pyglui import ui
